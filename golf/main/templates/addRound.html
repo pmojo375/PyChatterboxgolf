@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load tags %}
+{% load static %}
+
+{% block page_content %}
+
+<br>
+
+<div class="container">
+    <form action="/addround/" method="POST"
+          oninput="gross.value=parseInt(h1.value)+parseInt(h2.value)+parseInt(h3.value)+parseInt(h4.value)+parseInt(h5.value)+parseInt(h6.value)+parseInt(h7.value)+parseInt(h8.value)+parseInt(h9.value)">
+        <legend>Add Round:</legend>
+        <div class="row">
+            <div class="col-12">
+                <div class="form-group">
+                    <p>After selecting a golfer and week, enter the scores below. Check the box on the right of the
+                        score entry to indicate that the golfer shot max and picked up.</p>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="form-group">
+                  {% csrf_token %}
+                  {{ form.week }}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="form-group">
+                    {% csrf_token %}
+                    {{ form.golfer }}
+                </div>
+                <div class="form-group">
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole1 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                {% csrf_token %}
+                                {{ form.tookMax1 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole2 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                {% csrf_token %}
+                                {{ form.tookMax2 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole3 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                              {% csrf_token %}
+                                {{ form.tookMax3 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole4 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                              {% csrf_token %}
+                                {{ form.tookMax4 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole5 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                              {% csrf_token %}
+                                {{ form.tookMax5 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole6 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                              {% csrf_token %}
+                                {{ form.tookMax6 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole7 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                              {% csrf_token %}
+                                {{ form.tookMax7 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole8 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                              {% csrf_token %}
+                                {{ form.tookMax8 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2 mr-sm-2">
+                      {% csrf_token %}
+                      {{ form.hole9 }}
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                              {% csrf_token %}
+                                {{ form.tookMax9 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                              {% csrf_token %}
+                              {{ form.year }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        Gross:
+                        <output name="gross"
+                                for="h1 h2 h3 h4 h5 h6 h7 h8 h9"></output>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="form-group">
+                    <input class="btn btn-primary btn-lg btn-block" type="submit" value="Submit">
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<form action="{% url 'updateHcp'%}">
+    <input class="btn btn-primary btn-lg btn-block" type="submit" value="Update Hcp">
+</form>
+{% endblock %}

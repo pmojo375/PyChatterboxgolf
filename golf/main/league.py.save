@@ -1,0 +1,349 @@
+from main.models import Golfer, HandicapSet, Handicap, Tiebreaker, Score, ScheduleSet, Subrecord, HoleOld, Matchup, Hole
+from datetime import date, datetime
+from main.functions import *
+from django.db.models import Q
+
+def getNetDiff():
+    for golfer_id in range(29,45):
+        hcpDiff = 0
+        oppHcpDiff = 0
+        golfer_hcp = 0
+        opp_hcp = 0
+        for week in range(1, getWeek()+1):
+             skip = False
+             # get golfers team
+             team_id = Golfer.objects.all().filter(id=golfer_id)[0].team
+             year = 2000
+             if team_id == 0:
+                team_id = getUnSubTeam(golfer_id, week)
+
+             # get the opponents team
+             schedule = Matchup.objects.all().filter(Q(week=week) & Q(year=2020) & (Q(team1=team_id) | Q(team2=team_id)))[0]
+             if schedule.team1 == team_id:
+                 opp_team = schedule.team2
+             else:
+                 opp_team = schedule.team1
+
+             # get all golfers on team with subs replacing absent golfers
+             golfers = getTeamGolfers(team_id, week)
+
+             # determine if golfer is the 'A' player
+             if golfers['A'].id == golfer_id:
+                 isA = True
+             elif golfers['B'].id == golfer_id:
+                 isA = False
+             else:
+                 skip = True
+
+             if not skip:
+                 # set the appropriate hole array
+                 isFront = Matchup.objects.all().filter(week=week, year=2020)[0].front
+                 if isFront:
+                     holes = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                 else:
+                     holes = [10, 11, 12, 13, 14, 15, 16, 17, 18]
+
+                 # get oppenent teams golfers replacing absent golfers with subs
+                 opp_golfers = getTeamGolfers(opp_team, week)
+                 if isA:
+                     golfer_id = golfers['A'].id
+                     opp_golfer_id = opp_golfers['A'].id
+                     golfer_hcp = round(HandicapReal.objects.all().filter(golfer=golfers['A'].id, year=2020, week=week)[0].handicap)
+                     opp_hcp = round(HandicapReal.objects.all().filter(golfer=opp_golfers['A'].id, year=2020, week=week)[0].handicap)
+                     hcp_diff = golfer_hcp - opp_hcp
+                 else:
+                     golfer_id = golfers['B'].id
+                     opp_golfer_id = opp_golfers['B'].id
+                     golfer_hcp = round(HandicapReal.objects.all().filter(golfer=golfers['B'].id, year=2020, week=week)[0].handicap)
+                     opp_hcp = round(HandicapReal.objects.all().filter(golfer=opp_golfers['B'].id, year=2020, week=week)[0].handicap)
+                     hcp_diff = golfer_hcp - opp_hcp
+                 print("***")
+                 print(golfer_id)
+                 print(golfer_hcp)
+                 print("***")
+                 hcpDiff = getGross(golfer_id, week, year) - 36 - golfer_hcp
+                 oppHcpDiff = getGross(opp_golfer_id, week, year) - 36 - opp_hcp
+        print(golfer_id)
+        print(hcpDiff)
+        print(oppHcpDiff)
+        print("--------------")
+
+
+def getAverageHoleStats(year):
+    scores = Score.objects.all().filter(year=year)
+    data = {}
+
+    for hole in range(1, 18):
+        average = 0
+        holeScores = scores.filter(hole=hole)
+        total = 0
+        count = 0
+
+        for score in holeScores:
+            total = total + score.score
+            count = count + 1
+        if count > 0:
+            average = total/count
+        data.update( {str(hole): average } )
+
+    return data
+
+def getGolferHoleStats(golfer_id, **kwargs):
+    if 'year' in kwargs:
+        scores = Score.objects.all().filter(golfer=golfer_id, year=kwargs.get('year', None))
+    else:
+        scores = Score.objects.all().filter(golfer=golfer_id)
+
+    data = {}
+
+    for hole in range(1, 19):
+        average = 0
+        holeScores = scores.filter(hole=hole)
+        total = 0
+        count = 0
+
+        for score in holeScores:
+            total = total + score.score
+            count = count + 1
+        if count > 0:
+            average = total/count
+        data.update( {str(hole): average } )
+
+    return data
+
+def golferData(golfer_id):
+    # initialize variables
+    holeDataArray = {}
+    bestHole = 0
+    totalPoints = 0
+    worstHole = 0
+    bestGrossRound = 99
+    bestGrossRoundWeek = 0
+    worstGrossRound = 0
+    worstGrossRoundWeek = 0
+    aveHoleScores = []
+    pointsArray = []
+    scoreArray = []
+    bestAveHoleScore = 99
+    worstAveHoleScore = 0
+    bestNetRound = 99
+    bestNetRoundWeek = 0
+    worstNetRound = 0
+    worstNetRoundWeek = 0
+    birdies = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+    pars = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+    bogeys = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+    doubles = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+    triples = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+    fours = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+    worse = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 0}
+
+    # iterate over all holes
+    for hole in range(1,19):
+        # initialize total count
+        totalCountedHoles = 0
+
+        # add average hole score to array
+        aveHoleScores.append(Score.objects.filter(year=2020, hole=hole, golfer=golfer_id).aggregate(Avg('score'))['score__avg'] - Hole.objects.get(year=2020, hole=hole).par)
+
+        # update best and worst average hole scores if needed
+        if aveHoleScores[(hole-1)] < bestAveHoleScore:
+            bestAveHoleScore = aveHoleScores[hole-1]
+        if aveHoleScores[(hole-1)] > worstAveHoleScore:
+            worstAveHoleScore = aveHoleScores[hole-1]
+
+        # get all scores for the given hole
+        scores = Score.objects.all().filter(year=2020, hole=hole, golfer=golfer_id)
+        holePar = Hole.objects.get(year=2020, hole=hole).par
+
+        # iterate through each weeks' score
+        for score in scores:
+            # get strokes over/under
+            strokesOverUnder = score.score - holePar
+
+            # increment total holes counted
+            totalCountedHoles = totalCountedHoles + 1
+
+            # add hole results to the correct array
+            if strokesOverUnder == -1:
+                birdies[str(hole)] = birdies[str(hole)] + 1
+            elif strokesOverUnder == 0:
+                pars[str(hole)] = pars[str(hole)] + 1
+            elif strokesOverUnder == 1:
+                bogeys[str(hole)] = bogeys[str(hole)] + 1
+            elif strokesOverUnder == 2:
+                doubles[str(hole)] = doubles[str(hole)] + 1
+            elif strokesOverUnder == 3:
+                triples[str(hole)] = triples[str(hole)] + 1
+            elif strokesOverUnder == 4:
+                fours[str(hole)] = fours[str(hole)] + 1
+            else:
+                worse[str(hole)] = worse[str(hole)] + 1
+
+        # convert results into a percentage
+        birdies[str(hole)] = 100*birdies[str(hole)]/totalCountedHoles
+        pars[str(hole)] = 100*pars[str(hole)]/totalCountedHoles
+        bogeys[str(hole)] = 100*bogeys[str(hole)]/totalCountedHoles
+        doubles[str(hole)] = 100*doubles[str(hole)]/totalCountedHoles
+        triples[str(hole)] = 100*triples[str(hole)]/totalCountedHoles
+        fours[str(hole)] = 100*fours[str(hole)]/totalCountedHoles
+        worse[str(hole)] = 100*worse[str(hole)]/totalCountedHoles
+
+    # iterate over the current season
+    for week in range(1, getWeek()+1):
+        if getGross(golfer_id,week,2020) < bestGrossRound:
+            bestGrossRound = getGross(golfer_id,week,2020)
+            bestGrossRoundWeek = week
+        if getGross(golfer_id,week,2020) > worstGrossRound:
+            worstGrossRound = getGross(golfer_id,week,2020)
+            worstGrossRoundWeek = week
+        if getNet(golfer_id,week,2020) < bestNetRound:
+            bestNetRound = getNet(golfer_id,week,2020)
+            bestNetRoundWeek = week
+        if getNet(golfer_id,week,2020) > worstNetRound:
+            worstNetRound = getNet(golfer_id,week,2020)
+            worstNetRoundWeek = week
+        if golferPlayed(golfer_id, week, 2020):
+            score = getGross(golfer_id, week, 2020)
+            pts = getPoints(golfer_id, week)
+            pointsArray.append(pts)
+            scoreArray.append(score)
+            totalPoints = totalPoints + pts
+        else:
+            pointsArray.append(None)
+            scoreArray.append(None)
+
+    holeData = {'birdies': birdies, 'pars': pars, 'bogeys': bogeys, 'doubles': doubles, 'triples': triples, 'fours': fours, 'worse': worse}
+    return {'scoreArray': scoreArray, 'totalPoints': totalPoints, 'pointsArray': pointsArray, 'aveHoleScores': aveHoleScores, 'bestAveHoleScore': bestAveHoleScore, 'worstAveHoleScore': worstAveHoleScore, 'bestGrossRound': bestGrossRound, 'bestGrossRoundWeek': bestGrossRoundWeek, 'worstGrossRound': worstGrossRound, 'worstGrossRoundWeek': worstGrossRoundWeek, 'bestNetRound': bestNetRound, 'bestNetRoundWeek': bestNetRoundWeek, 'worstNetRound': worstNetRound, 'worstNetRoundWeek': worstNetRoundWeek, 'holeData': holeData}
+
+
+def hcpData(golfer_id):
+    # initialize variables
+    golferHcpArray = []
+    missed2019 = False
+    golfer2020 = golfer_id
+
+    # get the golfer object for 2020 and 2019 if they played then
+    golfer = Golfer.objects.get(id=golfer_id)
+
+    if Golfer.objects.filter(name=golfer.name, year=2019).exists():
+        golfer2019 = Golfer.objects.get(name=golfer.name, year=2019).id
+    else:
+        missed2019 = True
+
+    # iterate over the current season to get handicap array
+    for hcpWeek in range(getWeek(), -1, -1):
+
+        # initialize variables
+        week = hcpWeek
+        golfer_id = golfer2020
+        done = False
+        maxScore = 0
+        minScore = 99
+        maxScoreWeek = 0
+        minScoreWeek = 0
+        maxScoreYear = 0
+        minScoreYear = 0
+        removedMinMax = False
+        score = 0
+        year = 2020
+        firstScoreFlag = True
+        prevScore = 0
+        weeks = 0
+        weekScores = []
+
+        if week == 0 and year == 2020:
+            week = 20
+            year = 2019
+
+            # if golfer did not play in 2019, end the calculation or update id
+            if missed2019:
+                done = True
+            else:
+                golfer_id = golfer2019
+
+        # iterate over the golfers last 10 rounds
+        while weeks < 10 and not done:
+
+            # if golfer played week in question, add score
+            if golferPlayed(golfer_id, week, year):
+
+                # get the golfers score and add to count
+                weekScore = Score.objects.filter(golfer=golfer_id, week=week, year=year).aggregate(Sum('score'))['score__sum']
+                weekScores.append({'weekScore': weekScore, 'week': week, 'year': year})
+                score = score + weekScore
+
+                # if this is the first score to work from prior to this week, record it for reference
+                if firstScoreFlag:
+                    firstScoreFlag = False
+                    prevScore = weekScore
+
+                # check if score is the new max or min that will be thrown out
+                if weekScore > maxScore:
+                    maxScore = weekScore
+                    maxScoreWeek = week
+                    maxScoreYear = year
+
+                if weekScore < minScore:
+                    minScore = weekScore
+                    minScoreWeek = week
+                    minScoreYear = year
+
+                # increment week
+                weeks = weeks + 1
+
+            # rollover to 2019s scores if at week 1 in 2020
+            if week == 1 and year == 2020:
+                week = 20
+                year = 2019
+
+                # if golfer did not play in 2019, end the calculation or update id
+                if missed2019:
+                    done = True
+                else:
+                    golfer_id = golfer2019
+
+            # if week 1 in 2019, end the calculation
+            elif week == 1 and year == 2019:
+                done = True
+            # decrement week if weeks remain
+            else:
+                week = week - 1
+
+        # if golfer has played over 5 weeks, subtract best and worst rounds
+        if weeks > 5:
+            score = score - minScore - maxScore
+            weeks = weeks - 2
+            removedMinMax = True
+
+        # if there is any score data, determine handicap or set handicap to 0
+        if weeks != 0:
+            hcp = round(((score-(36*weeks))*.8)/weeks,2)
+        else:
+            hcp = 0
+
+        # append results to the array
+        golferHcpArray.append({'removedMinMax': removedMinMax, 'week': hcpWeek + 1, 'hcp': hcp, 'score': prevScore, 'minScoreWeek': minScoreWeek, 'minScoreYear': minScoreYear, 'minScore': minScore, 'maxScoreWeek': maxScoreWeek, 'maxScoreYear': maxScoreYear, 'maxScore': maxScore, 'weekScores': weekScores})
+
+        # print data for debug
+        info = golfer.name + ": Week " + str(hcpWeek + 1) + " - " + str(hcp)
+        print(info)
+        print(weekScores)
+        info = "Previous Weeks Score: " + str(prevScore)
+        print(info)
+        if removedMinMax:
+            info = "Max Score: " + str(maxScore) + " Week " + str(maxScoreWeek) + " " + str(maxScoreYear)
+            print(info)
+            info = "Min Score: " + str(minScore) + " Week " + str(minScoreWeek) + " " + str(minScoreYear)
+            print(info)
+
+    return golferHcpArray
+
+def updateRealHcp(golfer, data):
+    for entry in data:
+        if HandicapReal.objects.filter(golfer=golfer, week=entry['week'], year=2020).exists():
+            hcp = HandicapReal.objects.get(golfer=golfer, week=entry['week'], year=2020)
+            hcp.handicap = entry['hcp']
+            hcp.save()
+        else:
+            HandicapReal.objects.update_or_create(golfer=golfer, handicap=entry['hcp'], week=entry['week'], year=2020)
