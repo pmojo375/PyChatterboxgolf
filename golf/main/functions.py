@@ -8,6 +8,9 @@ from django.db.models import Q
 from operator import *
 
 teams = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+holes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+holes_front = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+holes_back = [10, 11, 12, 13, 14, 15, 16, 17, 18]
 golfers_2020 = [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
 golfers_2021 = [50, 51, 52, 53, 54, 55, 56, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 75]
 
@@ -50,7 +53,7 @@ def makeRound(golfer_id, week, year):
     -------
     null
     """
-    
+
     if golferPlayed(golfer_id, week, year=year):
         birdies = 0
         pars = 0
@@ -59,7 +62,7 @@ def makeRound(golfer_id, week, year):
         triples = 0
         fours = 0
         worse = 0
-        scores = Score.objects.all().filter(golfer=golfer_id, week=week, year=year)
+        scores = Score.objects.filter(golfer=golfer_id, week=week, year=year).values('score', 'hole')
         gross = getGross(golfer_id, week, year=year)
         net = getNet(golfer_id, week, year=year)
         points = getPoints(golfer_id, week, year=year)
@@ -70,16 +73,17 @@ def makeRound(golfer_id, week, year):
         par = {}
         std_dev = stDevRound(golfer_id, week)
 
-        for hole in range(1, 19):
-            hole_data = Hole.objects.get(year=2020, hole=hole)
-            hole_hcps[str(hole)] = hole_data.handicap9
-            par[str(hole)] = hole_data.par
+        hole_data = Hole.objects.filter(year=2020).values('handicap9', 'par', 'hole')
+
+        for hole in hole_data:
+            hole_hcps[hole['hole']] = hole['handicap9']
+            par[hole['hole']] = hole['par']
 
         # iterate through each weeks' score
         for score in scores:
-            hole = score.hole
+            hole = int(score['hole'])
             # get strokes over/under
-            strokes_over_under = score.score - par[str(hole)]
+            strokes_over_under = score['score'] - par[hole]
 
             # add hole results to the correct array
             if strokes_over_under == -1:
@@ -147,11 +151,11 @@ def makeRound(golfer_id, week, year):
             roundD.std_dev = std_dev
             roundD.save()
         else:
-            Round.objects.update_or_create(golfer=golfer_id, week=week, year=year, opp=opp_golfer_id, front=is_front,
-                                           opp_net=opp_net, opp_gross=opp_gross, opp_points=opp_points, opp_hcp=opp_hcp,
-                                           hcp=golfer_hcp, points=points, gross=gross, pars=pars, birdies=birdies,
-                                           bogeys=bogeys, doubles=doubles, triples=triples, fours=fours, worse=worse,
-                                           net=net, std_dev=std_dev)
+            Round(golfer=golfer_id, week=week, year=year, opp=opp_golfer_id, front=is_front,
+                    opp_net=opp_net, opp_gross=opp_gross, opp_points=opp_points, opp_hcp=opp_hcp,
+                    hcp=golfer_hcp, points=points, gross=gross, pars=pars, birdies=birdies,
+                    bogeys=bogeys, doubles=doubles, triples=triples, fours=fours, worse=worse,
+                    net=net, std_dev=std_dev).save()
 
 
 def getPlayoffTeams(**kwargs):
