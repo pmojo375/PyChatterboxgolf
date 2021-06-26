@@ -9,14 +9,14 @@ def get2021Golfers(**kwargs):
     subs = kwargs.get('subs', False)
 
     if subs:
-        golfers = Golfer.objects.filter(year=2021)
+        golfers = Golfer.objects.filter(year=2021).values('id')
     else:
-        golfers = Golfer.objects.filter(year=2021).exclude(team=0)
+        golfers = Golfer.objects.filter(year=2021).exclude(team=0).values('id')
 
     returnArray = []
 
     for golfer in golfers:
-        returnArray.append(golfer.id)
+        returnArray.append(golfer['id'])
 
     return returnArray
 
