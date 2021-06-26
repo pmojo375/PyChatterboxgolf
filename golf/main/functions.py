@@ -35,6 +35,22 @@ def allScoresIn():
 
 
 def makeRound(golfer_id, week, year):
+    """Creates a database entry for a golfers round with all if not most of the info needed
+
+    Parameters
+    ----------
+    golfer_id : int
+        The id of the golfer the round is for.
+    week : int
+        The week the round is for.
+    year : int
+        Sets the year you want the round for.
+
+    Returns
+    -------
+    null
+    """
+    
     if golferPlayed(golfer_id, week, year=year):
         birdies = 0
         pars = 0
