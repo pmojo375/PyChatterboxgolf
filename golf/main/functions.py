@@ -25,9 +25,9 @@ def allScoresIn():
     week = getWeek()
 
     if Score.objects.filter(year=2021, week=week).exists():
-        scores = Score.objects.filter(year=2021, week=week)
+        scores = Score.objects.filter(year=2021, week=week).count()
 
-        if scores.count() == 180:
+        if scores == 180:
 
             if not HandicapReal.objects.filter(year=2021, week=week+1).exists():
                 generateHcp2021()
