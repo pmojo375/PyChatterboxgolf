@@ -10,6 +10,12 @@ class Golfer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
+    class Meta:
+       indexes = [
+           models.Index(fields=['year', 'id']),
+           models.Index(fields=['team', 'year']),
+    ]
+
 
 class Game(models.Model):
     id = models.AutoField(primary_key=True)
@@ -86,6 +92,11 @@ class Hole(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
+    class Meta:
+       indexes = [
+           models.Index(fields=['year', 'hole']),
+    ]
+
 
 class Score(models.Model):
     id = models.AutoField(primary_key=True)
@@ -98,6 +109,13 @@ class Score(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
+    class Meta:
+       indexes = [
+           models.Index(fields=['golfer', 'week', 'year']),
+           models.Index(fields=['golfer', 'week']),
+           models.Index(fields=['week', 'year']),
+    ]
+
 
 class HandicapReal(models.Model):
     id = models.AutoField(primary_key=True)
@@ -107,7 +125,11 @@ class HandicapReal(models.Model):
     year = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
-
+    
+    class Meta:
+       indexes = [
+           models.Index(fields=['year', 'week', 'golfer']),
+    ]
 
 class Matchup(models.Model):
     id = models.AutoField(primary_key=True)
@@ -118,7 +140,11 @@ class Matchup(models.Model):
     year = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
-
+    
+    class Meta:
+       indexes = [
+           models.Index(fields=['year', 'week']),
+    ]
 
 class Subrecord(models.Model):
     id = models.AutoField(primary_key=True)
