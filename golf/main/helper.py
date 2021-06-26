@@ -4,7 +4,20 @@ from datetime import datetime, timedelta
 from django.db.models import Q
 
 def get2021Golfers(**kwargs):
+    """Gets the ids of all golfers who played in 2021
 
+    Parameters
+    ----------
+    subs : boolean, optional
+        Set True if you would like to also include subs in the lookup 
+        (default is false)
+
+    Returns
+    -------
+    array
+        Returns an array of all the golfer ids with or without subs.
+    """
+    
     # get optional parameters
     subs = kwargs.get('subs', False)
 
