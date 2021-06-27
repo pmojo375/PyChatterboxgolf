@@ -3,6 +3,10 @@ from django.db.models import Sum
 from datetime import datetime, timedelta
 from django.db.models import Q
 
+holes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+holes_front = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+holes_back = [10, 11, 12, 13, 14, 15, 16, 17, 18]
+
 def get2021Golfers(**kwargs):
     """Gets the ids of all golfers who played in 2021
 
@@ -17,7 +21,7 @@ def get2021Golfers(**kwargs):
     array
         Returns an array of all the golfer ids with or without subs.
     """
-    
+
     # get optional parameters
     subs = kwargs.get('subs', False)
 
@@ -30,6 +34,37 @@ def get2021Golfers(**kwargs):
 
     for golfer in golfers:
         returnArray.append(golfer['id'])
+
+    return returnArray
+
+
+def get2021GolferObjects(**kwargs):
+    """Gets the ids of all golfers who played in 2021
+
+    Parameters
+    ----------
+    subs : boolean, optional
+        Set True if you would like to also include subs in the lookup 
+        (default is false)
+
+    Returns
+    -------
+    array
+        Returns an array of all the golfer ids with or without subs.
+    """
+
+    # get optional parameters
+    subs = kwargs.get('subs', False)
+
+    if subs:
+        golfers = Golfer.objects.filter(year=2021)
+    else:
+        golfers = Golfer.objects.filter(year=2021).exclude(team=0)
+
+    returnArray = []
+
+    for golfer in golfers:
+        returnArray.append(golfer)
 
     return returnArray
 
@@ -97,7 +132,6 @@ def getSkinsWinner(week, **kwargs):
 
         winner['winnings'] = winnings
 
-
     return skins
 
 
@@ -124,10 +158,10 @@ def getSub(golfer_id, week, **kwargs):
     year = kwargs.get('year', 2021)
 
     if week != 0:
-        if golferPlayed(golfer_id, week, year=year):
-            return_id = golfer_id
-        else:
+        try:
             return_id = Subrecord.objects.get(absent_id=golfer_id, week=week, year=year).sub_id
+        except Subrecord.DoesNotExist:
+            return_id = golfer_id
     else:
         return_id = golfer_id
 
@@ -215,12 +249,12 @@ def getGolferIds(**kwargs):
     year = kwargs.get('year', 2021)
 
     # get golfers for given year
-    golfers = Golfer.objects.all().filter(year=year).exclude(team=0)
+    golfers = Golfer.objects.filter(year=year).exclude(team=0).values('id', 'name')
 
     returnList = []
 
     for golfer in golfers:
-        returnList.append({'name': golfer.name, 'id': golfer.id})
+        returnList.append({'name': golfer['name'], 'id': golfer['id']})
 
     return returnList
 
@@ -269,10 +303,10 @@ def getSubIds():
     """
 
     returnList = []
-    subs = Golfer.objects.all().filter(team=0)
+    subs = Golfer.objects.all().filter(team=0).values('name', 'id')
 
     for sub in subs:
-        returnList.append({'name': sub.name, 'id': sub.id})
+        returnList.append({'name': sub['name'], 'id': sub['id']})
 
     return returnList
 
@@ -292,6 +326,10 @@ def getTeamGolfers(team_id, week, **kwargs):
     get_sub : bool, optional
         A flag used to get subs if there were any for the specified week and
         year (default is True).
+    golfers : Tuple(Golfer), optional
+        A tuple of the golfer objects for the team if known. Would use this
+        function to determine the handicaps and A/B status without the golfer
+        lookup.
 
     Returns
     -------
@@ -303,8 +341,7 @@ def getTeamGolfers(team_id, week, **kwargs):
     # get optional parameters
     get_sub = kwargs.get('get_sub', True)
     year = kwargs.get('year', 2021)
-
-    golfers = Golfer.objects.all().filter(team=team_id, year=year)
+    golfers = kwargs.get('golfers', Golfer.objects.filter(team=team_id, year=year))
 
     golfer0 = golfers[0]
     golfer1 = golfers[1]
@@ -336,10 +373,10 @@ def getTeamGolfers(team_id, week, **kwargs):
         B_Hcp = golfer0_handicap
 
     # look into this - might not be needed
-    A.team = team_id
-    B.team = team_id
+    #A.team = team_id
+    #B.team = team_id
 
-    return {'A': A, 'A_Hcp': A_Hcp, 'B_Hcp': B_Hcp, 'B': B}
+    return {'A': A, 'A_Hcp': A_Hcp, 'B_Hcp': B_Hcp, 'B': B, 'Golfers': golfers}
 
 
 def getWeekScores(week, **kwargs):
@@ -458,10 +495,10 @@ def getNet(golfer_id, week, **kwargs):
 
     gross = Score.objects.filter(golfer=golfer_id, week=week, year=year).aggregate(Sum('score'))['score__sum']
 
-    try:
-        hcp = round(HandicapReal.objects.get(golfer=golfer_id, week=week, year=year).handicap)
-        net = gross - hcp
-    except HandicapReal.DoesNotExist:
+    hcp = round(getHcp(golfer_id, week, year=year))
+    net = gross - hcp
+
+    if hcp == 0:
         net = 0
 
     return net
@@ -486,7 +523,7 @@ def getSchedule(week, **kwargs):
     # get optional parameters
     year = kwargs.get('year', 2021)
 
-    matchups = Matchup.objects.all().filter(year=year, week=week)
+    matchups = Matchup.objects.filter(year=year, week=week)
 
     returnList = []
 
@@ -524,7 +561,7 @@ def getScore(golfer_id, week, hole, **kwargs):
     if 'isFront' in kwargs:
         isFront = kwargs.get('isFront')
     else:
-        isFront = Matchup.objects.all().filter(week=week, year=year)[0].front
+        isFront = Matchup.objects.filter(week=week, year=year).first().front
 
     if not isFront and hole < 10:
         hole = hole + 9
@@ -555,7 +592,7 @@ def getPoints(golfer_id, week, **kwargs):
     opp_golfers : dict, optional
         The golfer objects for the opponents team (default looks up the golfers from the database)
     golfers : dict, optional
-        The golfer objects for the golfers team (default looks up the golfers from the database)
+        The getTeamGolfer dict for the golfers team (default looks up the golfers from the database)
     year : int, optional
         Sets the year you want the golfers points for (default is the current year).
 
@@ -572,12 +609,12 @@ def getPoints(golfer_id, week, **kwargs):
     if team_id == 0:
         team_id = getUnSubTeam(golfer_id, week)
 
-    is_front = kwargs.get('is_frontFront', Matchup.objects.filter(week=week, year=year).first().front)
+    is_front = kwargs.get('is_front', Matchup.objects.filter(week=week, year=year).first().front)
 
     if is_front:
-        holes = range(1, 10)
+        holes = holes_front
     else:
-        holes = range(10, 19)
+        holes = holes_back
     
     opp_team = kwargs.get('opp_team', getOppTeam(team_id, week))
     opp_golfers = kwargs.get('opp_golfers', getTeamGolfers(opp_team, week))
@@ -590,15 +627,16 @@ def getPoints(golfer_id, week, **kwargs):
     if 'hole_hcp' in kwargs:
         hole_hcps = kwargs.get('hole_hcp')
     else:
-        for hole in range(1, 19):
-            hole_data = Hole.objects.get(year=2020, hole=hole)
-            hole_hcps[str(hole)] = hole_data.handicap9
+        hole_data = Hole.objects.filter(year=2020).values('handicap9', 'hole')
+
+        for hole in hole_data:
+            hole_hcps[hole['hole']] = hole['handicap9']
 
     for hole in holes:
-        hole_hcp = hole_hcps[str(hole)]
+        hole_hcp = hole_hcps[hole]
         points = points + getHolePoints(golfer_id, week, hole, hole_hcp=hole_hcp, opp_golfers=opp_golfers, opp_team=opp_team, isFront=is_front, team_id=team_id, golfers=golfers)
 
-    points = points + getRoundPoints(golfer_id, week, hole_hcp=hole_hcp, opp_golfers=opp_golfers, opp_team=opp_team,  isFront=is_front, team_id=team_id, golfers=golfers)
+    points = points + getRoundPoints(golfer_id, week, hole_hcp=hole_hcp, opp_golfers=opp_golfers, opp_team=opp_team, isFront=is_front, team_id=team_id, golfers=golfers)
 
     return points
 

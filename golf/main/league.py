@@ -791,35 +791,35 @@ def getGolfers3rdWeekPlayed(golfer_id, **kwargs):
 
 def copyHcp():
 
-    golfers = get2021Golfers(subs=True)
+    week = getWeek()
+
+    golfers = get2021GolferObjects(subs=True)
 
     # loop through all golfers
     for golfer in golfers:
 
-        glf = Golfer.objects.get(id=golfer)
-
-        if getGolfers3rdWeekPlayed(golfer) == 0:
-            glf.established = False
+        if getGolfers3rdWeekPlayed(golfer.id) == 0:
+            golfer.established = False
         else:
-            glf.established = True
+            golfer.established = True
 
-        glf.save()
+        golfer.save()
 
         # initalize the flag
         thirdRoundWeek = True
 
         # check if week is greater than or equal to the 3 required weeks, then set it to only copy week 4 hcp to weeks 3, 2, and 1
-        if getWeek() >= 3:
+        if week >= 3:
             weeks = getGolfers3rdWeekPlayed(golfer) + 1
         else:
-            weeks = getWeek() + 1
+            weeks = week + 1
 
-        for week in range(weeks, 0, -1):
+        for wk in range(weeks, 0, -1):
             # check if week handicap exists already
-            if HandicapReal.objects.filter(golfer=golfer, week=week, year=2021).exists():
+            if HandicapReal.objects.filter(golfer=golfer, week=wk, year=2021).exists():
 
                 # get the handicap
-                hcp = HandicapReal.objects.get(golfer=golfer, week=week, year=2021)
+                hcp = HandicapReal.objects.get(golfer=golfer, week=wk, year=2021)
 
                 # if the first handicap retreived, toggle flag else save stored hcp (will be week the golfer completed their 3rd round on)
                 if thirdRoundWeek:

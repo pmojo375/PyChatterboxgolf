@@ -57,7 +57,7 @@ DEBUG_TOOLBAR_PANELS = [
     #'debug_toolbar.panels.settings.SettingsPanel',
     #'debug_toolbar.panels.headers.HeadersPanel',
     #'debug_toolbar.panels.request.RequestPanel',
-    #'debug_toolbar.panels.sql.SQLPanel',
+    'debug_toolbar.panels.sql.SQLPanel',
     #'debug_toolbar.panels.staticfiles.StaticFilesPanel',
     #'debug_toolbar.panels.templates.TemplatesPanel',
     #'debug_toolbar.panels.cache.CachePanel',
@@ -78,12 +78,12 @@ DEBUG_TOOLBAR_CONFIG = {
     'RESULTS_CACHE_SIZE': 5,
 }
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'cache_table',
-    }
-}
+#CACHES = {
+#    'default': {
+#        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+#        'LOCATION': 'cache_table',
+#    }
+#}
 
 MIDDLEWARE = [
     'django.middleware.cache.UpdateCacheMiddleware',

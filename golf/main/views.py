@@ -18,13 +18,12 @@ import plotly.graph_objs as go
 from django.views.decorators.cache import cache_page
 
 # Create your views here.
-#temp @cache_page(60 * 60)
 def main(request):
     week = getWeek()
     lastGameWinner = []
     unestablished = Golfer.objects.filter(year=2021, established=False).exclude(team=0)
 
-    if week >8:
+    if week > 8:
         secondHalf = True
     else:
         secondHalf = False
@@ -34,8 +33,10 @@ def main(request):
     # get the next weeks schedule
     schedule = getSchedule(week + 1)
 
+    # check if there are handicaps for the given week
     check = HandicapReal.objects.filter(week=week, year=2021).exists()
 
+    # if the week is not the first of the year and there are not handicaps decrement the week
     if week != 0:
         if not check:
             week = week - 1
@@ -43,7 +44,7 @@ def main(request):
     # get standings for the current week
     standings = getStandings(week)
 
-    # get standings
+    # get standings in correct order
     firstHalfStandings = sorted(standings, key=itemgetter('firstHalfPoints'), reverse=True)
     secondHalfStandings = sorted(standings, key=itemgetter('secondHalfPoints'), reverse=True)
     fullStandings = sorted(standings, key=itemgetter('seasonPoints'), reverse=True)
@@ -78,24 +79,24 @@ def main(request):
         seeds[2] = seeds[3]
         seeds[3] = temp
 
-    lastSkinWinner = getSkinsWinner(getWeek(), year=2021)
+    lastSkinWinner = getSkinsWinner(week, year=2021)
 
-    currentGame = Game.objects.get(year=2021, week=getWeek()+1)
-    lastGame = Game.objects.get(year=2021, week=getWeek())
+    currentGame = Game.objects.get(year=2021, week=week+1)
+    lastGame = Game.objects.get(year=2021, week=week)
 
-    if GameEntry.objects.filter(won=True, week=getWeek(), year=2021).exists():
-        winners =  GameEntry.objects.filter(won=True, week=getWeek(), year=2021)
+    if GameEntry.objects.filter(won=True, week=week, year=2021).exists():
+        winners =  GameEntry.objects.filter(won=True, week=week, year=2021)
         for winner in winners:
                 lastGameWinner.append(Golfer.objects.get(id=winner.golfer).name)
     else:
         lastGameWinner.append('Not Set')
 
-    game_pot = (GameEntry.objects.filter(week=getWeek(), year=2021).count() * 2)/len(lastGameWinner)
+    game_pot = (GameEntry.objects.filter(week=week, year=2021).count() * 2)/len(lastGameWinner)
 
     context = {
         'lastSkinWinner': lastSkinWinner,
-        'week': getWeek() + 1,
-        'lastweek': getWeek(),
+        'week': week + 1,
+        'lastweek': week,
         'currentGame': currentGame,
         'lastGame': lastGame,
         'lastGameWinner': lastGameWinner,
@@ -113,6 +114,8 @@ def main(request):
 def games(request):
     lastGameWinner = []
 
+    week = getWeek()
+
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
         if 'golfer_game' in request.POST:
@@ -123,7 +126,7 @@ def games(request):
                 GameEntry.objects.update_or_create(
                     golfer=gameForm.cleaned_data['golfer_game'].id,
                     year=2021,
-                    week=getWeek() + 1
+                    week=week + 1
                 )
 
                 # redirect to a new URL:
@@ -137,7 +140,7 @@ def games(request):
                 SkinEntry.objects.update_or_create(
                     golfer=skinsForm.cleaned_data['golfer_skins'].id,
                     year=2021,
-                    week=getWeek() + 1
+                    week=week + 1
                 )
 
                 # redirect to a new URL:
@@ -148,7 +151,7 @@ def games(request):
             gameWinnerForm = GameWinnerForm(request.POST)
 
             if gameWinnerForm.is_valid():
-                entry = GameEntry.objects.get(golfer=gameWinnerForm.cleaned_data['game_winner'].golfer, week=getWeek(), year=2021)
+                entry = GameEntry.objects.get(golfer=gameWinnerForm.cleaned_data['game_winner'].golfer, week=week, year=2021)
                 entry.won = True
                 entry.save()
 
@@ -166,25 +169,25 @@ def games(request):
         skinsForm = SkinEntryForm()
         gameWinnerForm = GameWinnerForm()
 
-    lastWeekWinner = getSkinsWinner(getWeek(), year=2021)
+    lastWeekWinner = getSkinsWinner(week, year=2021)
 
     games = Game.objects.filter(year=2021)
 
     # determine if there is a game winner set for the current week yet and the next week
-    lastEnteredGameWeekExists = GameEntry.objects.filter(year=2021, week=getWeek(), won=True).exists()
-    nextEnteredGameWeekExists = GameEntry.objects.filter(year=2021, week=getWeek()+1, won=True).exists()
+    lastEnteredGameWeekExists = GameEntry.objects.filter(year=2021, week=week, won=True).exists()
+    nextEnteredGameWeekExists = GameEntry.objects.filter(year=2021, week=week+1, won=True).exists()
 
     # if there was a game winner for the last week (based on the getWeek functions returned week) then get the entries for the next week else get last weeks
     if lastEnteredGameWeekExists:
-        gameEntry = GameEntry.objects.filter(year=2021, week=getWeek()+1)
-        skinEntry = SkinEntry.objects.filter(year=2021, week=getWeek()+1)
+        gameEntry = GameEntry.objects.filter(year=2021, week=week+1)
+        skinEntry = SkinEntry.objects.filter(year=2021, week=week+1)
     else:
-        gameEntry = GameEntry.objects.filter(year=2021, week=getWeek())
-        skinEntry = SkinEntry.objects.filter(year=2021, week=getWeek())
+        gameEntry = GameEntry.objects.filter(year=2021, week=week)
+        skinEntry = SkinEntry.objects.filter(year=2021, week=week)
 
     # determine if there is a skins winner set for the current week yet and the next week
-    lastEnteredSkinWeekExists = SkinEntry.objects.filter(year=2021, week=getWeek(), won=True).exists()
-    nextEnteredSkinWeekExists = SkinEntry.objects.filter(year=2021, week=getWeek()+1, won=True).exists()
+    lastEnteredSkinWeekExists = SkinEntry.objects.filter(year=2021, week=week, won=True).exists()
+    nextEnteredSkinWeekExists = SkinEntry.objects.filter(year=2021, week=week+1, won=True).exists()
 
     gameEntries = []
     skinEntries = []
@@ -196,30 +199,30 @@ def games(request):
         skinEntries.append(Golfer.objects.get(id=entry.golfer).name)
 
     # get the nexts and last weeks game (determined by the next week without scores entered)
-    currentGame = Game.objects.get(year=2021, week=getWeek()+1)
-    lastGame = Game.objects.get(year=2021, week=getWeek())
+    currentGame = Game.objects.get(year=2021, week=week+1)
+    lastGame = Game.objects.get(year=2021, week=week)
 
     game_pot = 0
 
     # get look for the last weeks game winners (week determined by the last week with winners set) currently wont allow multiple winners in a week!
     # TODO: have the week update at midnight or use another system so multiple winners can be set if applicable)
-    if GameEntry.objects.filter(won=True, week=getWeek()+1, year=2021).exists():
-        winners = GameEntry.objects.filter(won=True, week=getWeek(), year=2021)
+    if GameEntry.objects.filter(won=True, week=week+1, year=2021).exists():
+        winners = GameEntry.objects.filter(won=True, week=week, year=2021)
         for winner in winners:
                lastGameWinner.append(Golfer.objects.get(id=winner.golfer).name)      
-        game_pot = (GameEntry.objects.filter(week=getWeek(), year=2021).count() * 2)/len(lastGameWinner)
-    elif GameEntry.objects.filter(won=True, week=getWeek(), year=2021).exists():
-        winners = GameEntry.objects.filter(won=True, week=getWeek(), year=2021)
+        game_pot = (GameEntry.objects.filter(week=week, year=2021).count() * 2)/len(lastGameWinner)
+    elif GameEntry.objects.filter(won=True, week=week, year=2021).exists():
+        winners = GameEntry.objects.filter(won=True, week=week, year=2021)
         for winner in winners:
                lastGameWinner.append(Golfer.objects.get(id=winner.golfer).name)
-        game_pot = (GameEntry.objects.filter(week=getWeek()-1, year=2021).count() * 2)/len(lastGameWinner)
+        game_pot = (GameEntry.objects.filter(week=week-1, year=2021).count() * 2)/len(lastGameWinner)
     else:
         lastGameWinner.append('Not Set')
 
     context = {
-        'week': getWeek() + 1,
+        'week': week + 1,
         'game_pot': game_pot,
-        'lastweek': getWeek(),
+        'lastweek': week,
         'games': games,
         'gameForm': gameForm,
         'skinsForm': skinsForm,

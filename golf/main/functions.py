@@ -65,10 +65,10 @@ def makeRound(golfer_id, week, year):
         scores = Score.objects.filter(golfer=golfer_id, week=week, year=year).values('score', 'hole')
         gross = getGross(golfer_id, week, year=year)
         net = getNet(golfer_id, week, year=year)
-        points = getPoints(golfer_id, week, year=year)
         team_id = Golfer.objects.get(id=golfer_id).team
         golfers = getTeamGolfers(team_id, week, year=year)
         is_front = Matchup.objects.filter(week=week, year=year).first().front
+        points = getPoints(golfer_id, week, year=year, is_front=is_front)
         hole_hcps = {}
         par = {}
         std_dev = stDevRound(golfer_id, week)
@@ -376,7 +376,7 @@ def getLeagueStats(week, **kwargs):
                 elif net == max_net:
                     max_net_names.append(name)
 
-                points_data.append(getPoints(golfer, wk, year=year, isFront=is_front, hole_hcp=hole_hcp, par=par))
+                points_data.append(getPoints(golfer, wk, year=year, is_front=is_front, hole_hcp=hole_hcp, par=par))
             else:
                 points_data.append(None)
 
@@ -391,43 +391,142 @@ def getLeagueStats(week, **kwargs):
 
 
 def getStandingsFast(week):
+    week = getWeek()
+
+    standings = {}
+
+    # get the total points for each half if needed
+    if week > 9:
+        firstHalfPoints = getPointsFast(9)
+        secondHalfPoints = getPointsFast(week)
+    else:
+        firstHalfPoints = getPointsFast(week)
+        secondHalfPoints = 0
+
+    # itereate through the teams
+    for team in teams:
+
+        team_golfers = Golfer.objects.filter(team=team, year=2021).values('id')
+
+        teamPoints = 0
+
+        if week > 9:
+            firstHalfTeam = firstHalfPoints[team_golfers[0]['id']] + firstHalfPoints[team_golfers[1]['id']]
+            secondHalfTeam = secondHalfPoints[team_golfers[0]['id']] + secondHalfPoints[team_golfers[1]['id']]
+            teamPoints = firstHalfTeam + secondHalfTeam
+        else:
+            teamPoints = firstHalfPoints[team_golfers[0]['id']] + firstHalfPoints[team_golfers[1]['id']]
+            firstHalfTeam = teamPoints
+            secondHalfTeam = 0
+
+        standings[team] = {'first': firstHalfTeam, 'second': secondHalfTeam, 'total': teamPoints}
+
+    return standings
+
+def getPointsFast(week, **kwargs):
+    """Gets all the golfers points in a dictionary format for the given week.
+
+    Parameters
+    ----------
+    week : int
+        Sets the week you want the accumulated points for.
+    year : int, optional
+        Sets the year you want the accumulated points for (default is the current year).
+    seperate_subs : bool, optional
+        Set to true if you want to pull the subs' points out of the absent golfers totals
+        and include the subs in the dictionary results. This would be set to true in places
+        where you would like to show stats and left false for standings calcs (default is
+        false).
+
+    Returns
+    -------
+    dictionary
+        Returns a dict of the golfer IDs and their point totals at the end of the inputted
+        week with sub contributions pulled out if specified.
+    """
+
+    # get optional parameters
+    year = kwargs.get('year', 2021)
+    seperate_subs = kwargs.get('seperate_subs', False)
+
     week_range = range(1, week + 1)
 
     golferPoints = {}
 
-    golfers = get2021Golfers()
+    # gets the 2021 golfer IDs with or without subs
+    if seperate_subs:
+        golfers = get2021Golfers(subs=True)
+    else:
+        golfers = get2021Golfers()
 
     for golfer in golfers:
-        golferPoints[str(golfer)] = 0
+
+        # initalize the golfers points
+        golferPoints[golfer] = 0
+
         for week in week_range:
-            golfer = getSub(golfer, week, year=2021)
-            if golferPlayed(golfer, week, year=2021):
-                print(str(golfer))
-                print(str(week))
-                rnd = Round.objects.get(golfer=golfer, year=2021, week=week)
-                golferPoints[str(golfer)] = rnd.points + golferPoints[str(golfer)]
+
+            if seperate_subs:
+                if golferPlayed(golfer, week, year=2021):
+                    rnd = Round.objects.get(golfer=golfer, year=2021, week=week)
+                    golferPoints[golfer] = rnd.points + golferPoints[golfer]
+
+            else:
+                golfer_or_sub = getSub(golfer, week, year=2021)
+                rnd = Round.objects.get(golfer=golfer_or_sub, year=2021, week=week)
+                golferPoints[golfer] = rnd.points + golferPoints[golfer]
 
     return golferPoints
 
 
-def getStandings(week):
+def getStandings(week, **kwargs):
+    """Gets the standings for the given week
+
+    Parameters
+    ----------
+    week : int
+        Sets the week you want the standings for.
+    year : int, optional
+        Sets the year you want the standings for (default is the current year).
+
+    Returns
+    -------
+    list
+        A list of each teams scores and handicaps including both halves
+    """
+
+    # get optional parameters
+    year = kwargs.get('year', 2021)
+
     out = []
+    firstHalfHcpA = 0
+    firstHalfHcpB = 0
     secondHalfHcpA = 0
     secondHalfHcpB = 0
 
     if week != 0:
         for team in teams:
+
+            # initialize golfers variable
+            golferObjects = None
+
             firstHalfPoints = 0
             secondHalfPoints = 0
 
             # get the first half points
             for wk in range(1, week + 1):
                 # get the golfers that played the week in question
-                golfers = getTeamGolfers(team, wk)
+
+                if wk == 1:
+                    golfers = getTeamGolfers(team, wk)
+                else:
+                    golfers = getTeamGolfers(team, wk, golfers=golferObjects)
+
+                golferObjects = golfers['Golfers']
 
                 # get the golfers points for the week in question
-                golferAPoints = getPoints(golfers['A'].id, wk, golfers=golfers)
-                golferBPoints = getPoints(golfers['B'].id, wk, golfers=golfers)
+                golferAPoints = getPoints(golfers['A'].id, wk, team_id=golfers['A'].team, golfers=golfers)
+                golferBPoints = getPoints(golfers['B'].id, wk, team_id=golfers['B'].team, golfers=golfers)
 
                 # add points to proper half
                 if wk < 10:
@@ -436,19 +535,68 @@ def getStandings(week):
                     secondHalfPoints = secondHalfPoints + golferAPoints + golferBPoints
 
             # if in first half still
+            # using week + 1 becuase the most current hcp is the next weeks
             if week + 1 < 10:
-                firstHalfHcpA = getHcp(golfers['A'].id, week + 1)
-                firstHalfHcpB = getHcp(golfers['B'].id, week + 1)
-            else:
-                firstHalfHcpA = getHcp(golfers['A'].id, 10)
-                firstHalfHcpB = getHcp(golfers['B'].id, 10)
-                secondHalfHcpA = getHcp(golfers['A'].id, week + 1)
-                secondHalfHcpB = getHcp(golfers['B'].id, week + 1)
+                # if neither golfer was not absent the last week played
+                if golfers['A'].team != 0 and golfers['B'].team != 0:
+                    firstHalfHcpA = golfers['A_Hcp']
+                    firstHalfHcpB = golfers['B_Hcp']
+
+                    golferAName = golfers['A'].name
+                    golferBName = golfers['B'].name
+                else:
+                    firstHalfHcp1 = getHcp(golferObjects[0].id, week + 1)
+                    firstHalfHcp2 = getHcp(golferObjects[1].id, week + 1)
+
+                    if firstHalfHcp1 >= firstHalfHcp2:
+                        firstHalfHcpA = firstHalfHcp2
+                        firstHalfHcpB = firstHalfHcp1
+
+                        golferAName = golferObjects[1].name
+                        golferBName = golferObjects[0].name
+                    else:
+                        firstHalfHcpA = firstHalfHcp1
+                        firstHalfHcpB = firstHalfHcp2
+
+                        golferAName = golferObjects[0].name
+                        golferBName = golferObjects[1].name
+            else:                
+                firstHalfHcp1 = getHcp(golferObjects[0].id, 10)
+                firstHalfHcp2 = getHcp(golferObjects[1].id, 10)
+
+                if firstHalfHcp1 >= firstHalfHcp2:
+                    firstHalfHcpA = firstHalfHcp2
+                    firstHalfHcpB = firstHalfHcp1
+                else:
+                    firstHalfHcpA = firstHalfHcp1
+                    firstHalfHcpB = firstHalfHcp2
+
+                # if neither golfer was not absent the last week played
+                if golfers['A'].team != 0 and golfers['B'].team != 0:
+                    secondHalfHcpA = golfers['A_Hcp']
+                    secondHalfHcpB = golfers['B_Hcp']
+
+                    golferAName = golfers['A'].name
+                    golferBName = golfers['B'].name
+                else:
+                    secondHalfHcp1 = getHcp(golferObjects[0].id, week + 1)
+                    secondHalfHcp2 = getHcp(golferObjects[1].id, week + 1)
+
+                    if secondHalfHcp1 >= secondHalfHcp2:
+                        secondHalfHcpA = secondHalfHcp2
+                        secondHalfHcpB = secondHalfHcp1
+
+                        golferAName = golferObjects[1].name
+                        golferBName = golferObjects[0].name
+
+                    else:
+                        secondHalfHcpA = secondHalfHcp1
+                        secondHalfHcpB = secondHalfHcp2\
+
+                        golferAName = golferObjects[0].name
+                        golferBName = golferObjects[1].name
 
             seasonPoints = firstHalfPoints + secondHalfPoints
-
-            golferAName = golfers['A'].name
-            golferBName = golfers['B'].name
 
             out.append({'A': golferAName, 'B': golferBName, 'firstHalfPoints': firstHalfPoints,
                         'secondHalfPoints': secondHalfPoints, 'firstHalfHcpA': firstHalfHcpA,
