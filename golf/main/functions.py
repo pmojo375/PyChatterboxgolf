@@ -393,7 +393,7 @@ def getLeagueStats(week, **kwargs):
 def getStandingsFast(week):
     week = getWeek()
 
-    standings = {}
+    standings = []
 
     # get the total points for each half if needed
     if week > 9:
@@ -406,20 +406,20 @@ def getStandingsFast(week):
     # itereate through the teams
     for team in teams:
 
-        team_golfers = Golfer.objects.filter(team=team, year=2021).values('id')
+        team_golfers = Golfer.objects.filter(team=team, year=2021)
 
         teamPoints = 0
 
         if week > 9:
-            firstHalfTeam = firstHalfPoints[team_golfers[0]['id']] + firstHalfPoints[team_golfers[1]['id']]
-            secondHalfTeam = secondHalfPoints[team_golfers[0]['id']] + secondHalfPoints[team_golfers[1]['id']]
+            firstHalfTeam = firstHalfPoints[team_golfers[0].id] + firstHalfPoints[team_golfers[1].id]
+            secondHalfTeam = secondHalfPoints[team_golfers[0].id] + secondHalfPoints[team_golfers[1].id]
             teamPoints = firstHalfTeam + secondHalfTeam
         else:
-            teamPoints = firstHalfPoints[team_golfers[0]['id']] + firstHalfPoints[team_golfers[1]['id']]
+            teamPoints = firstHalfPoints[team_golfers[0].id] + firstHalfPoints[team_golfers[1].id]
             firstHalfTeam = teamPoints
             secondHalfTeam = 0
 
-        standings[team] = {'first': firstHalfTeam, 'second': secondHalfTeam, 'total': teamPoints}
+        standings.append({'golfer1Hcp': getHcp(team_golfers[0].id, week+1), 'golfer2Hcp': getHcp(team_golfers[1].id, week+1), 'golfer1': team_golfers[0].name, 'golfer2': team_golfers[1].name, 'first': firstHalfTeam, 'second': secondHalfTeam, 'total': teamPoints})
 
     return standings
 
@@ -478,7 +478,6 @@ def getPointsFast(week, **kwargs):
 
     return golferPoints
 
-
 def getStandings(week, **kwargs):
     """Gets the standings for the given week
 
@@ -515,6 +514,12 @@ def getStandings(week, **kwargs):
 
             # get the first half points
             for wk in range(1, week + 1):
+
+                is_front = Matchup.objects.filter(week=wk, year=year).first().front
+
+                opp_team = getOppTeam(team, wk)
+                opp_golfers = getTeamGolfers(opp_team, wk)
+
                 # get the golfers that played the week in question
 
                 if wk == 1:
@@ -525,8 +530,8 @@ def getStandings(week, **kwargs):
                 golferObjects = golfers['Golfers']
 
                 # get the golfers points for the week in question
-                golferAPoints = getPoints(golfers['A'].id, wk, team_id=golfers['A'].team, golfers=golfers)
-                golferBPoints = getPoints(golfers['B'].id, wk, team_id=golfers['B'].team, golfers=golfers)
+                golferAPoints = getPoints(golfers['A'].id, wk, team_id=golfers['A'].team, golfers=golfers, is_front=is_front, opp_team=opp_team, opp_golfers=opp_golfers)
+                golferBPoints = getPoints(golfers['B'].id, wk, team_id=golfers['B'].team, golfers=golfers, is_front=is_front, opp_team=opp_team, opp_golfers=opp_golfers)
 
                 # add points to proper half
                 if wk < 10:

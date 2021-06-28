@@ -528,8 +528,10 @@ def getSchedule(week, **kwargs):
     returnList = []
 
     for matchup in matchups:
-        home = getTeamGolfers(matchup.team1, week, year=year, get_sub=False)
-        away = getTeamGolfers(matchup.team2, week, year=year, get_sub=False)
+        team1 = Golfer.objects.filter(team=matchup.team1, year=year)
+        team2 = Golfer.objects.filter(team=matchup.team2, year=year)
+        home = {'A': team1[0], 'B': team1[1]}
+        away = {'A': team2[0], 'B': team2[1]}
         returnList.append((away, home))
 
     return returnList

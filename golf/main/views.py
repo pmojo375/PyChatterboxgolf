@@ -42,12 +42,13 @@ def main(request):
             week = week - 1
 
     # get standings for the current week
-    standings = getStandings(week)
+    #standings = getStandings(week)
+    standings = getStandingsFast(week)
 
     # get standings in correct order
-    firstHalfStandings = sorted(standings, key=itemgetter('firstHalfPoints'), reverse=True)
-    secondHalfStandings = sorted(standings, key=itemgetter('secondHalfPoints'), reverse=True)
-    fullStandings = sorted(standings, key=itemgetter('seasonPoints'), reverse=True)
+    firstHalfStandings = sorted(standings, key=itemgetter('first'), reverse=True)
+    secondHalfStandings = sorted(standings, key=itemgetter('second'), reverse=True)
+    fullStandings = sorted(standings, key=itemgetter('total'), reverse=True)
 
     i = 0
     # add the first half winner to the playoff team list
@@ -70,11 +71,11 @@ def main(request):
     seeds.append(fullStandings[i])
 
     # reshuffle teams to set seeding properly
-    if seeds[0]['seasonPoints'] < seeds[1]['seasonPoints']:
+    if seeds[0]['total'] < seeds[1]['total']:
         temp = seeds[0]
         seeds[0] = seeds[1]
         seeds[1] = temp
-    if seeds[2]['seasonPoints'] < seeds[3]['seasonPoints']:
+    if seeds[2]['total'] < seeds[3]['total']:
         temp = seeds[2]
         seeds[2] = seeds[3]
         seeds[3] = temp

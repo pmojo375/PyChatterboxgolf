@@ -116,14 +116,14 @@
 
             {% for team in fullStandings %}
             <tr>
-              <td class="name">{{ team.A }}</td>
-              <td class="score" rowspan="2">{{ team.seasonPoints }}</td>
-              <td class="hcp">{{ team.secondHalfHcpA }}</td>
+              <td class="name">{{ team.golfer1 }}</td>
+              <td class="score" rowspan="2">{{ team.total }}</td>
+              <td class="hcp">{{ team.golfer1Hcp }}</td>
             </tr>
 
             <tr>
-              <td class="name">{{ team.B }}</td>
-              <td class="hcp">{{ team.secondHalfHcpB }}</td>
+              <td class="name">{{ team.golfer2 }}</td>
+              <td class="hcp">{{ team.golfer2Hcp }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -148,14 +148,14 @@
 
             {% for team in firstHalfStandings %}
             <tr>
-              <td class="name">{{ team.A }}</td>
-              <td class="score" rowspan="2">{{ team.firstHalfPoints }}</td>
-              <td class="hcp">{{ team.firstHalfHcpA }}</td>
+              <td class="name">{{ team.golfer1 }}</td>
+              <td class="score" rowspan="2">{{ team.total }}</td>
+              <td class="hcp">{{ team.golfer1Hcp }}</td>
             </tr>
 
             <tr>
-              <td class="name">{{ team.B }}</td>
-              <td class="hcp">{{ team.firstHalfHcpB }}</td>
+              <td class="name">{{ team.golfer2 }}</td>
+              <td class="hcp">{{ team.golfer2Hcp }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -181,14 +181,14 @@
 
             {% for team in secondHalfStandings %}
             <tr>
-              <td class="name">{{ team.A }}</td>
-              <td class="score" rowspan="2">{{ team.secondHalfPoints }}</td>
-              <td class="hcp">{{ team.secondHalfHcpA }}</td>
+              <td class="name">{{ team.golfer1 }}</td>
+              <td class="score" rowspan="2">{{ team.total }}</td>
+              <td class="hcp">{{ team.golfer1Hcp }}</td>
             </tr>
 
             <tr>
-              <td class="name">{{ team.B }}</td>
-              <td class="hcp">{{ team.secondHalfHcpB }}</td>
+              <td class="name">{{ team.golfer2 }}</td>
+              <td class="hcp">{{ team.golfer2Hcp }}</td>
             </tr>
             {% endfor %}
           </tbody>
