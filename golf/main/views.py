@@ -207,15 +207,15 @@ def games(request):
     # get look for the last weeks game winners (week determined by the last week with winners set) currently wont allow multiple winners in a week!
     # TODO: have the week update at midnight or use another system so multiple winners can be set if applicable)
     if GameEntry.objects.filter(won=True, week=week+1, year=2021).exists():
-        winners = GameEntry.objects.filter(won=True, week=week, year=2021)
+        winners = GameEntry.objects.filter(won=True, week=week+1, year=2021)
         for winner in winners:
                lastGameWinner.append(Golfer.objects.get(id=winner.golfer).name)      
-        game_pot = (GameEntry.objects.filter(week=week, year=2021).count() * 2)/len(lastGameWinner)
+        game_pot = (GameEntry.objects.filter(week=week+1, year=2021).count() * 2)/len(lastGameWinner)
     elif GameEntry.objects.filter(won=True, week=week, year=2021).exists():
         winners = GameEntry.objects.filter(won=True, week=week, year=2021)
         for winner in winners:
                lastGameWinner.append(Golfer.objects.get(id=winner.golfer).name)
-        game_pot = (GameEntry.objects.filter(week=week-1, year=2021).count() * 2)/len(lastGameWinner)
+        game_pot = (GameEntry.objects.filter(week=week, year=2021).count() * 2)/len(lastGameWinner)
     else:
         lastGameWinner.append('Not Set')
 
