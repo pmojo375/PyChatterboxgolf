@@ -791,40 +791,78 @@ def getGolfers3rdWeekPlayed(golfer_id, **kwargs):
 
 def copyHcp():
 
+    # get the current week
     week = getWeek()
 
+    # get all the golfers for the 2021 season
     golfers = get2021GolferObjects(subs=True)
 
-    # loop through all golfers
+    # loop through golfers
     for golfer in golfers:
 
-        if getGolfers3rdWeekPlayed(golfer.id) == 0:
+        # initalize the weeks played array
+        weeksPlayed = []
+
+        golfers3rdWeek = getGolfers3rdWeekPlayed(golfer.id)
+
+        # deteremine if golfer has established (played 3 weeks)
+        if golfers3rdWeek == 0:
             golfer.established = False
         else:
             golfer.established = True
 
         golfer.save()
 
-        # initalize the flag
-        thirdRoundWeek = True
+        # loop through all weeks 
+        for wk in range(1, week + 2):
 
-        # check if week is greater than or equal to the 3 required weeks, then set it to only copy week 4 hcp to weeks 3, 2, and 1
-        if week >= 3:
-            weeks = getGolfers3rdWeekPlayed(golfer) + 1
-        else:
-            weeks = week + 1
+            # did the golfer play that week
+            if golferPlayed(golfer.id, wk, year=2021):
+                # add week to weeks played array
+                weeksPlayed.append(wk)
 
-        for wk in range(weeks, 0, -1):
-            # check if week handicap exists already
-            if HandicapReal.objects.filter(golfer=golfer, week=wk, year=2021).exists():
+                # if week played is the 4th week the golfer has played
+                if len(weeksPlayed) == 4:
 
-                # get the handicap
-                hcp = HandicapReal.objects.get(golfer=golfer, week=wk, year=2021)
+                    # check if handicap exists already
+                    if HandicapReal.objects.filter(golfer=golfer.id, week=wk, year=2021).exists():
+                        handicap = HandicapReal.objects.get(golfer=golfer.id, week=wk, year=2021)
 
-                # if the first handicap retreived, toggle flag else save stored hcp (will be week the golfer completed their 3rd round on)
-                if thirdRoundWeek:
-                    storedHcp = hcp.handicap
-                    thirdRoundWeek = False
-                else:
-                    hcp.handicap = storedHcp
-                    hcp.save()
+                        # get the handicap to apply to the first 3 weeks played
+                        fourthHcp = handicap.handicap
+
+                    # iterate through the weeks the golfer has played and set them all to the handicap on the 4th round played
+                    for rd in weeksPlayed:
+
+                        # check if handicap exists already
+                        if HandicapReal.objects.filter(golfer=golfer.id, week=rd, year=2021).exists():
+                            handicap = HandicapReal.objects.get(golfer=golfer.id, week=rd, year=2021)
+                            handicap.handicap = fourthHcp
+                            handicap.save()
+                        else:
+                            HandicapReal(golfer=golfer.id, week=rd, year=2021, handicap=fourthHcp).save()
+
+                    break
+
+            # last week of loop (next played week)
+            if wk == week + 1:
+                print(golfer.name)
+
+                # check if handicap exists already
+                if HandicapReal.objects.filter(golfer=golfer.id, week=wk, year=2021).exists():
+                    handicap = HandicapReal.objects.get(golfer=golfer.id, week=wk, year=2021)
+
+                    # get the handicap to apply to the first 3 weeks played
+                    latestHcp = handicap.handicap
+
+                # iterate through the weeks the golfer has played and set them all to the handicap on the 4th round played
+                for rd in weeksPlayed:
+
+                    # check if handicap exists already
+                    if HandicapReal.objects.filter(golfer=golfer.id, week=rd, year=2021).exists():
+                        handicap = HandicapReal.objects.get(golfer=golfer.id, week=rd, year=2021)
+                        handicap.handicap = latestHcp
+                        handicap.save()
+                    else:
+                        HandicapReal(golfer=golfer.id, week=rd, year=2021, handicap=latestHcp).save()
+
