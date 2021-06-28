@@ -35,6 +35,8 @@ def allScoresIn():
             if not HandicapReal.objects.filter(year=2021, week=week+1).exists():
                 generateHcp2021()
 
+                makeRounds()
+
 
 
 def makeRound(golfer_id, week, year):
