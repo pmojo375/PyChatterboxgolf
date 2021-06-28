@@ -537,29 +537,21 @@ def getStandings(week, **kwargs):
             # if in first half still
             # using week + 1 becuase the most current hcp is the next weeks
             if week + 1 < 10:
-                # if neither golfer was not absent the last week played
-                if golfers['A'].team != 0 and golfers['B'].team != 0:
-                    firstHalfHcpA = golfers['A_Hcp']
-                    firstHalfHcpB = golfers['B_Hcp']
+                firstHalfHcp1 = getHcp(golferObjects[0].id, week + 1)
+                firstHalfHcp2 = getHcp(golferObjects[1].id, week + 1)
 
-                    golferAName = golfers['A'].name
-                    golferBName = golfers['B'].name
+                if firstHalfHcp1 >= firstHalfHcp2:
+                    firstHalfHcpA = firstHalfHcp2
+                    firstHalfHcpB = firstHalfHcp1
+
+                    golferAName = golferObjects[1].name
+                    golferBName = golferObjects[0].name
                 else:
-                    firstHalfHcp1 = getHcp(golferObjects[0].id, week + 1)
-                    firstHalfHcp2 = getHcp(golferObjects[1].id, week + 1)
+                    firstHalfHcpA = firstHalfHcp1
+                    firstHalfHcpB = firstHalfHcp2
 
-                    if firstHalfHcp1 >= firstHalfHcp2:
-                        firstHalfHcpA = firstHalfHcp2
-                        firstHalfHcpB = firstHalfHcp1
-
-                        golferAName = golferObjects[1].name
-                        golferBName = golferObjects[0].name
-                    else:
-                        firstHalfHcpA = firstHalfHcp1
-                        firstHalfHcpB = firstHalfHcp2
-
-                        golferAName = golferObjects[0].name
-                        golferBName = golferObjects[1].name
+                    golferAName = golferObjects[0].name
+                    golferBName = golferObjects[1].name
             else:                
                 firstHalfHcp1 = getHcp(golferObjects[0].id, 10)
                 firstHalfHcp2 = getHcp(golferObjects[1].id, 10)
@@ -571,30 +563,22 @@ def getStandings(week, **kwargs):
                     firstHalfHcpA = firstHalfHcp1
                     firstHalfHcpB = firstHalfHcp2
 
-                # if neither golfer was not absent the last week played
-                if golfers['A'].team != 0 and golfers['B'].team != 0:
-                    secondHalfHcpA = golfers['A_Hcp']
-                    secondHalfHcpB = golfers['B_Hcp']
+                secondHalfHcp1 = getHcp(golferObjects[0].id, week + 1)
+                secondHalfHcp2 = getHcp(golferObjects[1].id, week + 1)
 
-                    golferAName = golfers['A'].name
-                    golferBName = golfers['B'].name
+                if secondHalfHcp1 >= secondHalfHcp2:
+                    secondHalfHcpA = secondHalfHcp2
+                    secondHalfHcpB = secondHalfHcp1
+
+                    golferAName = golferObjects[1].name
+                    golferBName = golferObjects[0].name
+
                 else:
-                    secondHalfHcp1 = getHcp(golferObjects[0].id, week + 1)
-                    secondHalfHcp2 = getHcp(golferObjects[1].id, week + 1)
+                    secondHalfHcpA = secondHalfHcp1
+                    secondHalfHcpB = secondHalfHcp2\
 
-                    if secondHalfHcp1 >= secondHalfHcp2:
-                        secondHalfHcpA = secondHalfHcp2
-                        secondHalfHcpB = secondHalfHcp1
-
-                        golferAName = golferObjects[1].name
-                        golferBName = golferObjects[0].name
-
-                    else:
-                        secondHalfHcpA = secondHalfHcp1
-                        secondHalfHcpB = secondHalfHcp2\
-
-                        golferAName = golferObjects[0].name
-                        golferBName = golferObjects[1].name
+                    golferAName = golferObjects[0].name
+                    golferBName = golferObjects[1].name
 
             seasonPoints = firstHalfPoints + secondHalfPoints
 
