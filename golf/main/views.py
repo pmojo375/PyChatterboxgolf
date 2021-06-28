@@ -126,7 +126,7 @@ def games(request):
                 GameEntry.objects.update_or_create(
                     golfer=gameForm.cleaned_data['golfer_game'].id,
                     year=2021,
-                    week=week + 1
+                    week=gameForm.cleaned_data['week']
                 )
 
                 # redirect to a new URL:
@@ -140,7 +140,7 @@ def games(request):
                 SkinEntry.objects.update_or_create(
                     golfer=skinsForm.cleaned_data['golfer_skins'].id,
                     year=2021,
-                    week=week + 1
+                    week=skinsForm.cleaned_data['week']
                 )
 
                 # redirect to a new URL:
