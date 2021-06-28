@@ -17,11 +17,18 @@ import plotly.figure_factory as ff
 import plotly.graph_objs as go
 from django.views.decorators.cache import cache_page
 
+holes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+holes_front = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+holes_back = [10, 11, 12, 13, 14, 15, 16, 17, 18]
+
 # Create your views here.
 def main(request):
     week = getWeek()
     lastGameWinner = []
     unestablished = Golfer.objects.filter(year=2021, established=False).exclude(team=0)
+
+    # sub records for the given year
+    subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
 
     if week > 8:
         secondHalf = True
@@ -43,42 +50,12 @@ def main(request):
 
     # get standings for the current week
     #standings = getStandings(week)
-    standings = getStandingsFast(week)
+    standings = getStandingsFast(week, subs=subs)
 
     # get standings in correct order
     firstHalfStandings = sorted(standings, key=itemgetter('first'), reverse=True)
     secondHalfStandings = sorted(standings, key=itemgetter('second'), reverse=True)
     fullStandings = sorted(standings, key=itemgetter('total'), reverse=True)
-
-    i = 0
-    # add the first half winner to the playoff team list
-    seeds.append(firstHalfStandings[0])
-
-    # add the second half winner to the playoff team list as long as they are not the same as the first half
-    while secondHalfStandings[i] == seeds[0]:
-        i = i + 1
-    seeds.append(secondHalfStandings[i])
-
-    # add the next two teams with the highest total season point totals that are not the first and second half winners
-    i = 0
-    while fullStandings[i] == seeds[0] or fullStandings[i] == seeds[1]:
-        i = i + 1
-    seeds.append(fullStandings[i])
-
-    i = 0
-    while fullStandings[i] == seeds[0] or fullStandings[i] == seeds[1] or fullStandings[i] == seeds[2]:
-        i = i + 1
-    seeds.append(fullStandings[i])
-
-    # reshuffle teams to set seeding properly
-    if seeds[0]['total'] < seeds[1]['total']:
-        temp = seeds[0]
-        seeds[0] = seeds[1]
-        seeds[1] = temp
-    if seeds[2]['total'] < seeds[3]['total']:
-        temp = seeds[2]
-        seeds[2] = seeds[3]
-        seeds[3] = temp
 
     lastSkinWinner = getSkinsWinner(week, year=2021)
 
@@ -237,20 +214,13 @@ def games(request):
 
     return render(request, 'games.html', context)
 
-#temp @cache_page(60 * 60)
-def team(request, team):
 
-
-    context = {
-        'Scores': Scores
-    }
-    return render(request, 'team.html', context)
-
-#temp @cache_page(60 * 60)
 def golferSummary(request, golfer):
+
     year = 2021
-    holes = list(range(1, 19))
+
     golferName = Golfer.objects.get(id=golfer).name
+    subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
 
     # get pregenerated round data
     rounds = Round.objects.filter(year=2021)
@@ -263,7 +233,7 @@ def golferSummary(request, golfer):
     hcpPlot = []
     stDevHoleList = []
     week = getWeek()
-    netDiff = getNetDiff(golfer)
+    netDiff = getNetDiff(golfer, subs=subs)
 
     for item in list(stDevHole.values()):
         stDevHoleList.append(round(item, 3))
@@ -296,104 +266,6 @@ def golferSummary(request, golfer):
         pad=4))
     plot_div = plot(fig, output_type='div', include_plotlyjs=False,
                     config={'displayModeBar': False})
-
-    labels = ['Birdie', 'Par', 'Bogey', 'Double', 'Triple', 'Worse']
-    pieData = {}
-    for hole in range(1, 19):
-        pieData[str(hole)] = []
-        pieData[str(hole)].append(data['holeData']['birdies'][str(hole)])
-        pieData[str(hole)].append(data['holeData']['pars'][str(hole)])
-        pieData[str(hole)].append(data['holeData']['bogeys'][str(hole)])
-        pieData[str(hole)].append(data['holeData']['doubles'][str(hole)])
-        pieData[str(hole)].append(data['holeData']['triples'][str(hole)])
-        pieData[str(hole)].append(data['holeData']['worse'][str(hole)])
-
-    # Create subplots: use 'domain' type for Pie subplot
-    pie = make_subplots(rows=6, cols=3, specs=[[{'type': 'domain'}, {'type': 'domain'}, {'type': 'domain'}], [{'type': 'domain'}, {'type': 'domain'}, {'type': 'domain'}], [{'type': 'domain'}, {'type': 'domain'}, {
-                        'type': 'domain'}], [{'type': 'domain'}, {'type': 'domain'}, {'type': 'domain'}], [{'type': 'domain'}, {'type': 'domain'}, {'type': 'domain'}], [{'type': 'domain'}, {'type': 'domain'}, {'type': 'domain'}]])
-
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['1'], name="Hole 1"), 1, 1)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['2'], name="Hole 2"), 1, 2)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['3'], name="Hole 3"), 1, 3)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['4'], name="Hole 4"), 2, 1)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['5'], name="Hole 5"), 2, 2)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['6'], name="Hole 6"), 2, 3)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['7'], name="Hole 7"), 3, 1)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['8'], name="Hole 8"), 3, 2)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['9'], name="Hole 9"), 3, 3)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['10'], name="Hole 10"), 4, 1)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['11'], name="Hole 11"), 4, 2)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['12'], name="Hole 12"), 4, 3)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['13'], name="Hole 13"), 5, 1)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['14'], name="Hole 14"), 5, 2)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['15'], name="Hole 15"), 5, 3)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['16'], name="Hole 16"), 6, 1)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['17'], name="Hole 17"), 6, 2)
-    pie.add_trace(
-        go.Pie(labels=labels, values=pieData['18'], name="Hole 18"), 6, 3)
-
-    # Use `hole` to create a donut-like pie chart
-    pie.update_traces(hole=.4, hoverinfo="label+percent+name")
-
-    pie.update_layout(showlegend=False,
-                      title_text="Hole Performance",
-                      # Add annotations in the center of the donut pies.
-                      annotations=[dict(text='1', x=1 / 6, y=1 / 12, font_size=20, showarrow=False),
-                                   dict(text='2', x=3 / 6, y=1 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='3', x=5 / 6, y=1 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='4', x=1 / 6, y=3 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='5', x=3 / 6, y=3 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='6', x=5 / 6, y=3 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='7', x=1 / 6, y=5 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='8', x=3 / 6, y=5 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='9', x=5 / 6, y=5 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='10', x=1 / 6, y=7 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='11', x=3 / 6, y=7 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='12', x=5 / 6, y=7 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='13', x=1 / 6, y=9 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='14', x=3 / 6, y=9 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='15', x=5 / 6, y=9 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='16', x=1 / 6, y=11 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='17', x=3 / 6, y=11 / 12,
-                                        font_size=20, showarrow=False),
-                                   dict(text='18', x=5 / 6, y=11 / 12, font_size=20, showarrow=False)])
-
-    pie.update_layout(height=3000)
-
-    pie_div = plot(
-        pie, output_type='div', include_plotlyjs=False, config={'displayModeBar': False})
 
     fig = px.bar(data['holeData'], labels={
                  "index": "Hole", "variable": "Result", "value": "Percent"}, title="Score Distribution")
@@ -513,7 +385,6 @@ def golferSummary(request, golfer):
     context = data
     context['lastWeek'] = lastWeek
     context['holeStd_div'] = holeStd_div
-    context['pie'] = pie_div
     context['netDiff'] = round(netDiff['totalHcpDiff'], 2)
     context['oppNetDiff'] = round(netDiff['totalOppHcpDiff'], 2)
     context['name'] = golferName
@@ -530,7 +401,7 @@ def golferSummary(request, golfer):
 
     return render(request, "golferSummary.html", context)
 
-#temp @cache_page(60 * 60)
+
 def leagueStats(request):
 
     par = {}
@@ -539,12 +410,15 @@ def leagueStats(request):
     week = getWeek()
 
     # populate par and hole handicap arrays for use later in the view
-    for hole in range(1, 19):
+    for hole in holes:
         hole_data = Hole.objects.get(year=2020, hole=hole)
         par[str(hole)] = hole_data.par
         holeHcp[str(hole)] = hole_data.handicap9
 
-    data = getLeagueStats(week, hole_hcp=holeHcp, par=par)
+    # sub records for the given year
+    subs = Subrecord.objects.filter(year=year).values('sub_id', 'absent_id', 'week')
+
+    data = getLeagueStats(week, hole_hcp=holeHcp, par=par, subs=subs)
 
     ave_hole_scores = []
     hcp_data = {}
@@ -585,12 +459,12 @@ def leagueStats(request):
 
     golfer_names = []
 
-    golfers = get2021Golfers()
+    golfers = getGolferObjects(2021)
 
     for golfer in golfers:
-        golfer_names.append(Golfer.objects.get(id=golfer, year=year).name)
+        golfer_names.append(golfer.name)
         for wk in range(1, week + 2):
-            hcp = HandicapReal.objects.get(golfer=golfer, year=year, week=wk).handicap
+            hcp = HandicapReal.objects.get(golfer=golfer.id, year=year, week=wk).handicap
             hcp_data[str(wk)].append(round(hcp, 2))
 
     table_data = [golfer_names]
@@ -668,26 +542,21 @@ def leagueStats(request):
 def updateHcp(request):
     return render(request, "updateHcp.html")
 
-#temp @cache_page(60 * 60)
+
 def aveScores(request):
     par = {}
     holeHcp = {}
+    week = getWeek()
 
-    isFront = Matchup.objects.all().filter(week=getWeek(), year=2021)[0].front
+    isFront = Matchup.objects.filter(week=week, year=2021).first().front
 
-    for hole in range(1, 19):
-        par[str(hole)] = Hole.objects.all().filter(year=2020, hole=hole)[0].par
-        holeHcp[str(hole)] = Hole.objects.all().filter(year=2020, hole=hole)[0].handicap9
+    for hole_num in holes:
+        hole = Hole.objects.get(year=2020, hole=hole_num)
+        par[hole_num] = hole.par
+        holeHcp[hole_num] = hole.handicap9
 
-    # set the appropriate hole array
-    if isFront:
-        holes = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    else:
-        holes = [10, 11, 12, 13, 14, 15, 16, 17, 18]
-
-    golfers = Golfer.objects.all().filter(year=2021).exclude(team=0)
+    golfers = Golfer.objects.filter(year=2021).exclude(team=0)
     golferData = []
-    holeRange = list(range(1, 19))
     golferIndex = 0
     golferNames = []
     holeIndex = 0
@@ -697,10 +566,10 @@ def aveScores(request):
         holedata = []
         holeIndex = 0
 
-        for hole in holeRange:
+        for hole in holes:
             if Score.objects.filter(golfer=golfer.id, hole=hole, year=2021).exists():
                 average = round(Score.objects.filter(golfer=golfer.id, hole=hole, year=2021).aggregate(
-                    Avg('score'))['score__avg'] - Hole.objects.get(year=2020, hole=hole).par, 2)
+                    Avg('score'))['score__avg'] - par[hole], 2)
             else:
                 average = 0
             holedata.append(average)
@@ -710,7 +579,7 @@ def aveScores(request):
         golferNames.append(golfer.name)
         golferIndex = golferIndex + 1
 
-    fig = ff.create_annotated_heatmap(data, y=golferNames, x=holeRange, colorscale=[
+    fig = ff.create_annotated_heatmap(data, y=golferNames, x=holes, colorscale=[
                                       [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True)
     fig.update_traces(
         hovertemplate="Golfer: %{y}<br>Hole: %{x}<br>Average: %{z:.2f}<extra></extra>")
@@ -731,7 +600,6 @@ def aveScores(request):
 
     golfers = Golfer.objects.all().filter(year=2020).exclude(team=0)
     golferData = []
-    holeRange = list(range(1, 19))
     golferIndex = 0
     golferNames = []
     holeIndex = 0
@@ -741,10 +609,10 @@ def aveScores(request):
         holedata = []
         holeIndex = 0
 
-        for hole in holeRange:
+        for hole in holes:
             if Score.objects.filter(golfer=golfer.id, hole=hole, year=2020).exists():
                 average = round(Score.objects.filter(golfer=golfer.id, hole=hole, year=2020).aggregate(
-                    Avg('score'))['score__avg'] - Hole.objects.get(year=2020, hole=hole).par, 2)
+                    Avg('score'))['score__avg'] - par[hole], 2)
             else:
                 average = 0
             holedata.append(average)
@@ -754,7 +622,7 @@ def aveScores(request):
         golferNames.append(golfer.name)
         golferIndex = golferIndex + 1
 
-    fig = ff.create_annotated_heatmap(data, y=golferNames, x=holeRange, colorscale=[
+    fig = ff.create_annotated_heatmap(data, y=golferNames, x=holes, colorscale=[
                                       [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True)
     fig.update_traces(
         hovertemplate="Golfer: %{y}<br>Hole: %{x}<br>Average: %{z:.2f}<extra></extra>")
@@ -784,9 +652,9 @@ def aveScores(request):
         holedata = []
         holeIndex = 0
 
-        for hole in holeRange:
+        for hole in holes:
             average = round(Score.objects.filter(golfer=golfer.id, hole=hole, year=2019).aggregate(
-                Avg('score'))['score__avg'] - Hole.objects.get(year=2019, hole=hole).par, 2)
+                Avg('score'))['score__avg'] - par[hole], 2)
             holedata.append(average)
             holeIndex = holeIndex + 1
 
@@ -794,7 +662,7 @@ def aveScores(request):
         golferNames.append(golfer.name)
         golferIndex = golferIndex + 1
 
-    fig = ff.create_annotated_heatmap(data, y=golferNames, x=holeRange, colorscale=[
+    fig = ff.create_annotated_heatmap(data, y=golferNames, x=holes, colorscale=[
                                       [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True)
     fig.update_traces(
         hovertemplate="Golfer: %{y}<br>Hole: %{x}<br>Average: %{z:.2f}<extra></extra>")
@@ -1008,6 +876,7 @@ def weekSummary(request, week):
     holeHcp = {}
 
     isFront = Matchup.objects.filter(week=week, year=year).first().front
+    subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
 
     for hole in range(1, 19):
         par[str(hole)] = Hole.objects.get(year=2020, hole=hole).par
@@ -1030,7 +899,7 @@ def weekSummary(request, week):
     h9 = []
     gross = []
     net = []
-    chartData = getWeeklyScores(week, year)
+    chartData = getWeeklyScores(week, year, subs=subs)
 
     fig = px.bar(chartData[1], x=chartData[0], y=chartData[1],
                  title="Strokes Over Par", text=chartData[1])
@@ -1045,7 +914,7 @@ def weekSummary(request, week):
     teamsList = []
     oppList = []
 
-    chart = getWeekScores(week)
+    chart = getWeekScores(week, subs=subs)
 
     chart = sorted(chart, key=itemgetter('Gross'))
 
@@ -1069,7 +938,7 @@ def weekSummary(request, week):
     for golfer in golfers:
 
         # gets sub if there was one for the golfer that week
-        golfer_id = getSub(golfer.id, week)
+        golfer_id = getSub(golfer.id, week, subs=subs)
 
         h1.append(Score.objects.get(golfer=golfer_id, week=week, year=year, hole=holes[0]).score)
         h2.append(Score.objects.get(golfer=golfer_id, week=week, year=year, hole=holes[1]).score)
@@ -1081,8 +950,8 @@ def weekSummary(request, week):
         h8.append(Score.objects.get(golfer=golfer_id, week=week, year=year, hole=holes[7]).score)
         h9.append(Score.objects.get(golfer=golfer_id, week=week, year=year, hole=holes[8]).score)
 
-        gross.append(getGross(golfer_id, week, year=year))
-        net.append(getNet(golfer_id, week, year=year))
+        gross.append(getGross(golfer_id, week, year=year, subs=subs))
+        net.append(getNet(golfer_id, week, year=year, subs=subs))
 
     headerColor = 'grey'
     rowEvenColor = 'lightgrey'
@@ -1129,9 +998,9 @@ def weekSummary(request, week):
         team1 = matchup.team1
         team2 = matchup.team2
 
-        golfers = getTeamGolfers(team1, week)
+        golfers = getTeamGolfers(team1, week, subs=subs)
 
-        opps = getTeamGolfers(team2, week)
+        opps = getTeamGolfers(team2, week, subs=subs)
 
         week_teams.append(team1)
         week_teams.append(team2)

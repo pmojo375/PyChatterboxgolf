@@ -174,7 +174,7 @@ def getNetDiffLeague(**kwargs):
                 opp_team = schedule.team1
 
             # get all golfers on team with subs replacing absent golfers
-            golfers = getTeamGolfers(team_id, week)
+            golfers = getTeamGolfers(team_id, week, subs=subs)
 
             # determine if golfer is the 'A' player
             if golfers['A'].id == golfer_id:
@@ -244,6 +244,7 @@ def getNetDiff(golfer_id, **kwargs):
 
     # get optional parameters
     year = kwargs.get('year', 2021)
+    subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
 
     if year == 2021:
         endWeek = getWeek() + 1
@@ -276,7 +277,7 @@ def getNetDiff(golfer_id, **kwargs):
             opp_team = schedule.team1
 
         # get all golfers on team with subs replacing absent golfers
-        golfers = getTeamGolfers(team_id, week)
+        golfers = getTeamGolfers(team_id, week, subs=subs)
 
         # determine if golfer is the 'A' player
         if golfers['A'].id == golfer_id:
@@ -289,7 +290,7 @@ def getNetDiff(golfer_id, **kwargs):
         if not skip:
 
             # get oppenent teams golfers replacing absent golfers with subs
-            opp_golfers = getTeamGolfers(opp_team, week)
+            opp_golfers = getTeamGolfers(opp_team, week, subs=subs)
 
             if isA:
                 golfer_id = golfers['A'].id
@@ -749,7 +750,7 @@ def hcpUpdate():
 
 def generateHcp2021():
 
-    golfers = get2021Golfers(subs=True)
+    golfers = getGolferIds(2021, subs=True)
 
     for golfer in golfers:
         data = hcpData2021(golfer)

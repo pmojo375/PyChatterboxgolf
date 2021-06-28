@@ -12,34 +12,31 @@ holes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 holes_front = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 holes_back = [10, 11, 12, 13, 14, 15, 16, 17, 18]
 golfers_2020 = [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
-golfers_2021 = [50, 51, 52, 53, 54, 55, 56, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 75]
 
 
-def makeRounds():
+def makeRounds(**kwargs):
 
-    golfers = get2021Golfers(subs=True)
+    subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
+    golfers = getGolferIds(2021, subs=True)
 
     for golfer in golfers:
         for week in range(1, getWeek() + 1):
-            makeRound(golfer, week, 2021)
+            makeRound(golfer, week, 2021, subs=subs)
 
 
 def allScoresIn():
     week = getWeek()
 
-    if Score.objects.filter(year=2021, week=week).exists():
-        scores = Score.objects.filter(year=2021, week=week).count()
+    if Score.objects.filter(year=2021, week=week).count() == 180:
 
-        if scores == 180:
+        if not HandicapReal.objects.filter(year=2021, week=week+1).exists():
+            generateHcp2021()
 
-            if not HandicapReal.objects.filter(year=2021, week=week+1).exists():
-                generateHcp2021()
-
-                makeRounds()
+            makeRounds()
 
 
 
-def makeRound(golfer_id, week, year):
+def makeRound(golfer_id, week, year, **kwargs):
     """Creates a database entry for a golfers round with all if not most of the info needed
 
     Parameters
@@ -56,6 +53,8 @@ def makeRound(golfer_id, week, year):
     null
     """
 
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
+
     if golferPlayed(golfer_id, week, year=year):
         birdies = 0
         pars = 0
@@ -65,12 +64,12 @@ def makeRound(golfer_id, week, year):
         fours = 0
         worse = 0
         scores = Score.objects.filter(golfer=golfer_id, week=week, year=year).values('score', 'hole')
-        gross = getGross(golfer_id, week, year=year)
-        net = getNet(golfer_id, week, year=year)
+        gross = getGross(golfer_id, week, year=year, subs=subs)
+        net = getNet(golfer_id, week, year=year, subs=subs)
         team_id = Golfer.objects.get(id=golfer_id).team
-        golfers = getTeamGolfers(team_id, week, year=year)
+        golfers = getTeamGolfers(team_id, week, year=year, subs=subs)
         is_front = Matchup.objects.filter(week=week, year=year).first().front
-        points = getPoints(golfer_id, week, year=year, is_front=is_front)
+        points = getPoints(golfer_id, week, year=year, is_front=is_front, subs=subs)
         hole_hcps = {}
         par = {}
         std_dev = stDevRound(golfer_id, week)
@@ -107,7 +106,7 @@ def makeRound(golfer_id, week, year):
             team_id = getUnSubTeam(golfer_id, week)
 
         opp_team = getOppTeam(team_id, week)
-        opp_golfers = getTeamGolfers(opp_team, week)
+        opp_golfers = getTeamGolfers(opp_team, week, subs=subs)
 
         # determine if golfer is the 'A' player
         if golfers['A'].id == golfer_id:
@@ -124,9 +123,9 @@ def makeRound(golfer_id, week, year):
             golfer_hcp = golfers['B_Hcp']
             opp_hcp = opp_golfers['B_Hcp']
 
-        opp_points = getPoints(opp_golfer_id, week, year=year)
-        opp_gross = getGross(opp_golfer_id, week, year=year)
-        opp_net = getNet(opp_golfer_id, week, year=year)
+        opp_points = getPoints(opp_golfer_id, week, year=year, subs=subs)
+        opp_gross = getGross(opp_golfer_id, week, year=year, subs=subs)
+        opp_net = getNet(opp_golfer_id, week, year=year, subs=subs)
 
         if Round.objects.filter(golfer=golfer_id, week=week, year=year).exists():
             roundD = Round.objects.get(golfer=golfer_id, week=week, year=year)
@@ -224,12 +223,13 @@ def getPlayoffTeams(**kwargs):
 
 # returns the weekly scores recorded for a specified year and week
 # returns an array of x and y data points for a plot
-def getWeeklyScores(week, year):
+def getWeeklyScores(week, year, **kwargs):
     # golfer ids from the 2021 season
     x_data = []
     y_data = []
 
-    golfers = get2021Golfers()
+    golfers = getGolferIds(2021)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     for golfer in golfers:
         if golferPlayed(golfer, week, year=year):
@@ -237,7 +237,7 @@ def getWeeklyScores(week, year):
                 Sum('score'))['score__sum'] - 36)
             x_data.append(Golfer.objects.get(id=golfer, year=year).name)
         else:
-            golfer = getSub(golfer, week, year=year)
+            golfer = getSub(golfer, week, year=year, subs=subs)
             y_data.append(Score.objects.filter(golfer=golfer, week=week).aggregate(
                 Sum('score'))['score__sum'] - 36)
             x_data.append(Golfer.objects.get(id=golfer).name)
@@ -258,6 +258,8 @@ def getLeagueStats(week, **kwargs):
             hole_data = Hole.objects.get(year=2020, hole=hole)
             par[str(hole)] = hole_data.par
             hole_hcp[str(hole)] = hole_data.handicap9
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
+
 
     year = 2021
     ave_hole_scores = []
@@ -341,7 +343,7 @@ def getLeagueStats(week, **kwargs):
         for golfer in golfers:
             golfer_names[str(golfer.id)] = golfer.name
 
-    golfers = get2021Golfers()
+    golfers = getGolferIds(2021)
 
     for wk in range(1, week + 1):
         is_front = Matchup.objects.filter(week=week, year=year).first().front
@@ -378,7 +380,7 @@ def getLeagueStats(week, **kwargs):
                 elif net == max_net:
                     max_net_names.append(name)
 
-                points_data.append(getPoints(golfer, wk, year=year, is_front=is_front, hole_hcp=hole_hcp, par=par))
+                points_data.append(getPoints(golfer, wk, year=year, is_front=is_front, hole_hcp=hole_hcp, par=par, subs=subs))
             else:
                 points_data.append(None)
 
@@ -392,17 +394,19 @@ def getLeagueStats(week, **kwargs):
             'maxNetNames': max_net_names, 'holeData': hole_data}
 
 
-def getStandingsFast(week):
+def getStandingsFast(week, **kwargs):
     week = getWeek()
+
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     standings = []
 
     # get the total points for each half if needed
     if week > 9:
-        firstHalfPoints = getPointsFast(9)
-        secondHalfPoints = getPointsFast(week)
+        firstHalfPoints = getPointsFast(9, subs=subs)
+        secondHalfPoints = getPointsFast(week, subs=subs)
     else:
-        firstHalfPoints = getPointsFast(week)
+        firstHalfPoints = getPointsFast(week, subs=subs)
         secondHalfPoints = 0
 
     # itereate through the teams
@@ -450,16 +454,14 @@ def getPointsFast(week, **kwargs):
     # get optional parameters
     year = kwargs.get('year', 2021)
     seperate_subs = kwargs.get('seperate_subs', False)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     week_range = range(1, week + 1)
 
     golferPoints = {}
 
     # gets the 2021 golfer IDs with or without subs
-    if seperate_subs:
-        golfers = get2021Golfers(subs=True)
-    else:
-        golfers = get2021Golfers()
+    golfers = getGolferIds(2021, subs=seperate_subs)
 
     for golfer in golfers:
 
@@ -474,7 +476,7 @@ def getPointsFast(week, **kwargs):
                     golferPoints[golfer] = rnd.points + golferPoints[golfer]
 
             else:
-                golfer_or_sub = getSub(golfer, week, year=2021)
+                golfer_or_sub = getSub(golfer, week, year=2021, subs=subs)
                 rnd = Round.objects.get(golfer=golfer_or_sub, year=2021, week=week)
                 golferPoints[golfer] = rnd.points + golferPoints[golfer]
 
@@ -498,6 +500,7 @@ def getStandings(week, **kwargs):
 
     # get optional parameters
     year = kwargs.get('year', 2021)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     out = []
     firstHalfHcpA = 0
@@ -520,20 +523,20 @@ def getStandings(week, **kwargs):
                 is_front = Matchup.objects.filter(week=wk, year=year).first().front
 
                 opp_team = getOppTeam(team, wk)
-                opp_golfers = getTeamGolfers(opp_team, wk)
+                opp_golfers = getTeamGolfers(opp_team, wk, subs=subs)
 
                 # get the golfers that played the week in question
 
                 if wk == 1:
-                    golfers = getTeamGolfers(team, wk)
+                    golfers = getTeamGolfers(team, wk, subs=subs)
                 else:
-                    golfers = getTeamGolfers(team, wk, golfers=golferObjects)
+                    golfers = getTeamGolfers(team, wk, golfers=golferObjects, subs=subs)
 
                 golferObjects = golfers['Golfers']
 
                 # get the golfers points for the week in question
-                golferAPoints = getPoints(golfers['A'].id, wk, team_id=golfers['A'].team, golfers=golfers, is_front=is_front, opp_team=opp_team, opp_golfers=opp_golfers)
-                golferBPoints = getPoints(golfers['B'].id, wk, team_id=golfers['B'].team, golfers=golfers, is_front=is_front, opp_team=opp_team, opp_golfers=opp_golfers)
+                golferAPoints = getPoints(golfers['A'].id, wk, team_id=golfers['A'].team, golfers=golfers, is_front=is_front, opp_team=opp_team, opp_golfers=opp_golfers, subs=subs)
+                golferBPoints = getPoints(golfers['B'].id, wk, team_id=golfers['B'].team, golfers=golfers, is_front=is_front, opp_team=opp_team, opp_golfers=opp_golfers, subs=subs)
 
                 # add points to proper half
                 if wk < 10:
@@ -595,7 +598,7 @@ def getStandings(week, **kwargs):
                         'seasonPoints': seasonPoints})
     else:
         for team in teams:
-            golfers = getTeamGolfers(team, week + 1)
+            golfers = getTeamGolfers(team, week + 1, subs=subs)
 
             # first week point are 0
             golferAPoints = 0
@@ -626,13 +629,15 @@ def getScoreString(golfer_id, week, hole, **kwargs):
     if team_id == 0:
         team_id = getUnSubTeam(golfer_id, week)
 
+    subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
+
     # get the opponents team
     if 'opp_team' in kwargs and 'isFront' in kwargs:
         opp_team = kwargs.get('opp_team')
         isFront = kwargs.get('isFront')
 
         # get oppenent teams golfers replacing absent golfers with subs
-        opp_golfers = getTeamGolfers(opp_team, week)
+        opp_golfers = getTeamGolfers(opp_team, week, subs=subs)
 
     elif 'opp_golfers' in kwargs and 'isFront' in kwargs:
         opp_golfers = kwargs.get('opp_golfers')
@@ -647,7 +652,7 @@ def getScoreString(golfer_id, week, hole, **kwargs):
             opp_team = schedule.team1
 
         # get oppenent teams golfers replacing absent golfers with subs
-        opp_golfers = getTeamGolfers(opp_team, week)
+        opp_golfers = getTeamGolfers(opp_team, week, subs=subs)
 
         # set the appropriate hole array
         isFront = schedule.front
@@ -656,7 +661,7 @@ def getScoreString(golfer_id, week, hole, **kwargs):
     if 'golfers' in kwargs:
         golfers = kwargs.get('golfers')
     else:
-        golfers = getTeamGolfers(team_id, week)
+        golfers = getTeamGolfers(team_id, week, subs=subs)
 
     score = getScore(golfer_id, week, hole)
 

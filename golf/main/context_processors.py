@@ -1,4 +1,4 @@
-from main.functions import getWeek, getGolferIds, getSubIds
+from main.functions import getWeek, getGolferObjects
 
 
 def weekList(request):
@@ -14,17 +14,8 @@ def weekList(request):
 
 def golferList(request):
 
-    golfers = getGolferIds()
+    golfers = getGolferObjects(2021)
 
     return {
         'golferList': golfers
-    }
-
-
-def subList(request):
-
-    golfers = getSubIds()
-
-    return {
-        'subList': golfers
     }

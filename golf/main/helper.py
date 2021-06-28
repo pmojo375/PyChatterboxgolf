@@ -7,7 +7,7 @@ holes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 holes_front = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 holes_back = [10, 11, 12, 13, 14, 15, 16, 17, 18]
 
-def get2021Golfers(**kwargs):
+def getGolferIds(year, **kwargs):
     """Gets the ids of all golfers who played in 2021
 
     Parameters
@@ -26,9 +26,9 @@ def get2021Golfers(**kwargs):
     subs = kwargs.get('subs', False)
 
     if subs:
-        golfers = Golfer.objects.filter(year=2021).values('id')
+        golfers = Golfer.objects.filter(year=year).values('id')
     else:
-        golfers = Golfer.objects.filter(year=2021).exclude(team=0).values('id')
+        golfers = Golfer.objects.filter(year=year).exclude(team=0).values('id')
 
     returnArray = []
 
@@ -38,7 +38,7 @@ def get2021Golfers(**kwargs):
     return returnArray
 
 
-def get2021GolferObjects(**kwargs):
+def getGolferObjects(year, **kwargs):
     """Gets the ids of all golfers who played in 2021
 
     Parameters
@@ -57,9 +57,9 @@ def get2021GolferObjects(**kwargs):
     subs = kwargs.get('subs', False)
 
     if subs:
-        golfers = Golfer.objects.filter(year=2021)
+        golfers = Golfer.objects.filter(year=year)
     else:
-        golfers = Golfer.objects.filter(year=2021).exclude(team=0)
+        golfers = Golfer.objects.filter(year=year).exclude(team=0)
 
     returnArray = []
 
@@ -95,9 +95,9 @@ def getSkinsWinner(week, **kwargs):
     matchup = Matchup.objects.filter(week=week, year=year)[0]
 
     if matchup.front:
-        holes = range(1,10)
+        holes = holes_front
     else:
-        holes = range(10,19)
+        holes = holes_back
 
     skins = []
 
@@ -125,7 +125,7 @@ def getSkinsWinner(week, **kwargs):
         if len(min_score_golfer) == 1:
             skins.append({'golfer_id':min_score_golfer[0], 'golfer': Golfer.objects.get(id=min_score_golfer[0]).name, 'hole': hole, 'score': hole_min})
 
-    num_entries = SkinEntry.objects.filter(week=week, year=year).count()
+    num_entries = entered.count()
     num_winners = len(skins)
     for winner in skins:
         winnings = (num_entries * 5)/num_winners
@@ -156,14 +156,13 @@ def getSub(golfer_id, week, **kwargs):
 
     # get optional parameters
     year = kwargs.get('year', 2021)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=year).values('sub_id', 'absent_id', 'week'))
 
-    if week != 0:
-        try:
-            return_id = Subrecord.objects.get(absent_id=golfer_id, week=week, year=year).sub_id
-        except Subrecord.DoesNotExist:
-            return_id = golfer_id
-    else:
+    # looks through the array of sub record dicts and is true if golfer played
+    if not any(d['absent_id'] == golfer_id and d['week'] == week for d in subs):
         return_id = golfer_id
+    else:
+        return_id = Subrecord.objects.get(absent_id=golfer_id, week=week, year=year).sub_id
 
     return return_id
 
@@ -228,35 +227,6 @@ def golferPlayed(golfer_id, week, **kwargs):
         return True
     else:
         return False
-
-
-def getGolferIds(**kwargs):
-    """Gets a list of all the golfers ids and names
-
-    Parameters
-    ----------
-    year : int, optional
-        The year you are wanting the golfer list for (default is the current
-        year)
-
-    Returns
-    -------
-    list
-        A list of dictionaries with all the golfers' names and ids
-    """
-
-    # get optional parameters
-    year = kwargs.get('year', 2021)
-
-    # get golfers for given year
-    golfers = Golfer.objects.filter(year=year).exclude(team=0).values('id', 'name')
-
-    returnList = []
-
-    for golfer in golfers:
-        returnList.append({'name': golfer['name'], 'id': golfer['id']})
-
-    return returnList
 
 
 def getHcp(golfer_id, week, **kwargs):
@@ -342,14 +312,15 @@ def getTeamGolfers(team_id, week, **kwargs):
     get_sub = kwargs.get('get_sub', True)
     year = kwargs.get('year', 2021)
     golfers = kwargs.get('golfers', Golfer.objects.filter(team=team_id, year=year))
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     golfer0 = golfers[0]
     golfer1 = golfers[1]
 
     # replace golfer with sub if week was missed
     if get_sub:
-        golfer0 = Golfer.objects.get(id=getSub(golfer0.id, week))
-        golfer1 = Golfer.objects.get(id=getSub(golfer1.id, week))
+        golfer0 = Golfer.objects.get(id=getSub(golfer0.id, week, subs=subs))
+        golfer1 = Golfer.objects.get(id=getSub(golfer1.id, week, subs=subs))
 
     # get handicaps
     golfer0_handicap = getHcp(golfer0.id, week, year=year)
@@ -408,6 +379,7 @@ def getWeekScores(week, **kwargs):
 
     # get the optional parameters
     year = kwargs.get('year', 2021)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     # for now, year year has had the same teams so year is not used
     teams = range(1,11)
@@ -415,12 +387,12 @@ def getWeekScores(week, **kwargs):
 
     for team in teams:
 
-        golfers = getTeamGolfers(team, week, get_sub=True)
+        golfers = getTeamGolfers(team, week, get_sub=True, subs=subs)
 
         A = {'id': golfers['A'].id, 'Name': golfers['A'].name, 'Gross': getGross(
-            golfers['A'].id, week, year=year), 'Net': getNet(golfers['A'].id, week, year=year)}
+            golfers['A'].id, week, year=year, subs=subs), 'Net': getNet(golfers['A'].id, week, year=year, subs=subs)}
         B = {'id': golfers['B'].id, 'Name': golfers['B'].name, 'Gross': getGross(
-            golfers['B'].id, week, year=year), 'Net': getNet(golfers['B'].id, week, year=year)}
+            golfers['B'].id, week, year=year, subs=subs), 'Net': getNet(golfers['B'].id, week, year=year, subs=subs)}
 
         returnList.append(A)
         returnList.append(B)
@@ -453,10 +425,11 @@ def getGross(golfer_id, week, **kwargs):
     # get optional parameters
     get_sub = kwargs.get('get_sub', False)
     year = kwargs.get('year', 2021)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     # get the golfer's sub if requested
     if get_sub:
-        golfer_id = getSub(golfer_id, week)
+        golfer_id = getSub(golfer_id, week, subs=subs)
 
     gross = Score.objects.filter(golfer=golfer_id, week=week, year=year).aggregate(Sum('score'))['score__sum']
 
@@ -488,10 +461,11 @@ def getNet(golfer_id, week, **kwargs):
     # get optional parameters
     get_sub = kwargs.get('get_sub', False)
     year = kwargs.get('year', 2021)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     # get the golfer's sub if requested
     if get_sub:
-        golfer_id = getSub(golfer_id, week)
+        golfer_id = getSub(golfer_id, week, subs=subs)
 
     gross = Score.objects.filter(golfer=golfer_id, week=week, year=year).aggregate(Sum('score'))['score__sum']
 
@@ -607,6 +581,7 @@ def getPoints(golfer_id, week, **kwargs):
     # get optional parameters
     year = kwargs.get('year', 2021)
     team_id = kwargs.get('team_id', Golfer.objects.get(id=golfer_id).team)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     if team_id == 0:
         team_id = getUnSubTeam(golfer_id, week)
@@ -619,8 +594,8 @@ def getPoints(golfer_id, week, **kwargs):
         holes = holes_back
     
     opp_team = kwargs.get('opp_team', getOppTeam(team_id, week))
-    opp_golfers = kwargs.get('opp_golfers', getTeamGolfers(opp_team, week))
-    golfers = kwargs.get('golfers', getTeamGolfers(team_id, week))
+    opp_golfers = kwargs.get('opp_golfers', getTeamGolfers(opp_team, week, subs=subs))
+    golfers = kwargs.get('golfers', getTeamGolfers(team_id, week, subs=subs))
 
     points = 0
 
@@ -632,13 +607,13 @@ def getPoints(golfer_id, week, **kwargs):
         hole_data = Hole.objects.filter(year=2020).values('handicap9', 'hole')
 
         for hole in hole_data:
-            hole_hcps[hole['hole']] = hole['handicap9']
+            hole_hcps[str(hole['hole'])] = hole['handicap9']
 
     for hole in holes:
-        hole_hcp = hole_hcps[hole]
-        points = points + getHolePoints(golfer_id, week, hole, hole_hcp=hole_hcp, opp_golfers=opp_golfers, opp_team=opp_team, isFront=is_front, team_id=team_id, golfers=golfers)
+        hole_hcp = hole_hcps[str(hole)]
+        points = points + getHolePoints(golfer_id, week, hole, hole_hcp=hole_hcp, opp_golfers=opp_golfers, opp_team=opp_team, isFront=is_front, team_id=team_id, golfers=golfers, subs=subs)
 
-    points = points + getRoundPoints(golfer_id, week, hole_hcp=hole_hcp, opp_golfers=opp_golfers, opp_team=opp_team, isFront=is_front, team_id=team_id, golfers=golfers)
+    points = points + getRoundPoints(golfer_id, week, hole_hcp=hole_hcp, opp_golfers=opp_golfers, opp_team=opp_team, isFront=is_front, team_id=team_id, golfers=golfers, subs=subs)
 
     return points
 
@@ -686,6 +661,7 @@ def getHolePoints(golfer_id, week, hole, **kwargs):
     # get optional parameters
     year = kwargs.get('year', 2021)
     team_id = kwargs.get('team_id', Golfer.objects.get(id=golfer_id).team)
+    subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
 
     if team_id == 0:
         team_id = getUnSubTeam(golfer_id, week)
@@ -701,8 +677,8 @@ def getHolePoints(golfer_id, week, hole, **kwargs):
             hole = hole + 9
 
     opp_team = kwargs.get('opp_team', getOppTeam(team_id, week))
-    opp_golfers = kwargs.get('opp_golfers', getTeamGolfers(opp_team, week))
-    golfers = kwargs.get('golfers', getTeamGolfers(team_id, week))
+    opp_golfers = kwargs.get('opp_golfers', getTeamGolfers(opp_team, week, subs=subs))
+    golfers = kwargs.get('golfers', getTeamGolfers(team_id, week, subs=subs))
     hole_hcp = kwargs.get('hole_hcp', Hole.objects.get(hole=hole, year=2020).handicap9)
 
     # determine if golfer is the 'A' player
@@ -794,14 +770,15 @@ def getRoundPoints(golfer_id, week, **kwargs):
     # get optional parameters
     year = kwargs.get('year', 2021)
     team_id = kwargs.get('team_id', Golfer.objects.get(id=golfer_id).team)
+    subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
     if team_id == 0:
         team_id = getUnSubTeam(golfer_id, week)
 
     is_front = kwargs.get('isFront', Matchup.objects.filter(week=week, year=year).first().front)
     opp_team = kwargs.get('opp_team', getOppTeam(team_id, week))
-    opp_golfers = kwargs.get('opp_golfers', getTeamGolfers(opp_team, week))
-    golfers = kwargs.get('golfers', getTeamGolfers(team_id, week))
+    opp_golfers = kwargs.get('opp_golfers', getTeamGolfers(opp_team, week, subs=subs))
+    golfers = kwargs.get('golfers', getTeamGolfers(team_id, week, subs=subs))
 
     # determine if golfer is the 'A' player
     if golfers['A'].id == golfer_id:
@@ -815,8 +792,8 @@ def getRoundPoints(golfer_id, week, **kwargs):
         golfer_id = golfers['B'].id
         opp_golfer_id = opp_golfers['B'].id
 
-    net = getNet(golfer_id, week, year=year, get_sub=True)
-    opp_net = getNet(opp_golfer_id, week, year=year, get_sub=True)
+    net = getNet(golfer_id, week, year=year, get_sub=True, subs=subs)
+    opp_net = getNet(opp_golfer_id, week, year=year, get_sub=True, subs=subs)
 
     if net < opp_net:
         points = 3
