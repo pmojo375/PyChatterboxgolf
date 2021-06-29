@@ -27,7 +27,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '#cp_p%*icup#zyr4xjjou4t4qoc939h%c4gzy%src46-((7dhs'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -45,48 +45,30 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'debug_toolbar',
-    #'django_tables2',
     'main.apps.MainConfig',
     'django_extensions',
     'cachalot',
 ]
 
 DEBUG_TOOLBAR_PANELS = [
-    #'debug_toolbar.panels.versions.VersionsPanel',
+    'debug_toolbar.panels.versions.VersionsPanel',
     'debug_toolbar.panels.timer.TimerPanel',
-    #'debug_toolbar.panels.settings.SettingsPanel',
-    #'debug_toolbar.panels.headers.HeadersPanel',
-    #'debug_toolbar.panels.request.RequestPanel',
+    'debug_toolbar.panels.settings.SettingsPanel',
+    'debug_toolbar.panels.headers.HeadersPanel',
+    'debug_toolbar.panels.request.RequestPanel',
     'debug_toolbar.panels.sql.SQLPanel',
-    #'debug_toolbar.panels.staticfiles.StaticFilesPanel',
-    #'debug_toolbar.panels.templates.TemplatesPanel',
-    #'debug_toolbar.panels.cache.CachePanel',
-    #'debug_toolbar.panels.signals.SignalsPanel',
-    #'debug_toolbar.panels.logging.LoggingPanel',
-    #'debug_toolbar.panels.redirects.RedirectsPanel',
-    #'debug_toolbar.panels.profiling.ProfilingPanel',
+    'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+    'debug_toolbar.panels.templates.TemplatesPanel',
+    'debug_toolbar.panels.cache.CachePanel',
+    'debug_toolbar.panels.signals.SignalsPanel',
+    'debug_toolbar.panels.logging.LoggingPanel',
+    'debug_toolbar.panels.redirects.RedirectsPanel',
+    'debug_toolbar.panels.profiling.ProfilingPanel',
     'cachalot.panels.CachalotPanel',
 ]
-def show_toolbar(request):
-    return True
 
-
-DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
-    'ENABLE_STACKTRACES_LOCALS': False,
-    'ENABLE_STACKTRACES': False,
-    'RESULTS_CACHE_SIZE': 5,
-}
-
-#CACHES = {
-#    'default': {
-#        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-#        'LOCATION': 'cache_table',
-#    }
-#}
 
 MIDDLEWARE = [
-    'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -95,14 +77,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware', 
 ]
-
-CACHE_MIDDLEWARE_ALIAS = 'default'
-
-CACHE_MIDDLEWARE_SECONDS = 86400
-
-CACHE_MIDDLEWARE_KEY_PREFIX = ''
 
 ROOT_URLCONF = 'golf.urls'
 
@@ -119,7 +94,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'main.context_processors.weekList',
                 'main.context_processors.golferList',
-                'main.context_processors.subList',
             ],
         },
     },
@@ -157,6 +131,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
