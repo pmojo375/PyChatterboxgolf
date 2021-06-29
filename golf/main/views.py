@@ -240,7 +240,7 @@ def golferSummary(request, golfer):
         stDevHoleList.append(round(item, 3))
 
     fig = px.bar(y=stDevHoleList, x=holes, title="Standard Deviation Per Hole", text=stDevHoleList, labels={"x": "Hole", "y": "StDev"})
-    fig.update_xaxes(title="Hole", fixedrange=True)
+    fig.update_xaxes(title="Hole", fixedrange=True, range=[.5, 18.5])
     fig.update_yaxes(title="Standard Dev.", fixedrange=True)
     fig.update_layout(margin=margin)
     holeStd_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
@@ -249,14 +249,14 @@ def golferSummary(request, golfer):
         aveHoleScores.append(round(data2, 2))
 
     fig = px.bar(y=aveHoleScores, x=holes, title="Average Over Par", text=aveHoleScores, labels={"x": "Hole", "y": "Average"})
-    fig.update_xaxes(title="Hole", fixedrange=True)
+    fig.update_xaxes(title="Hole", fixedrange=True, range=[.5, 18.5])
     fig.update_yaxes(title="Over Par", fixedrange=True)
     fig.update_layout(margin=margin)
     plot_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = px.bar(data['holeData'], labels={
                  "index": "Hole", "variable": "Result", "value": "Percent"}, title="Score Distribution")
-    fig.update_xaxes(fixedrange=True)
+    fig.update_xaxes(fixedrange=True, range=[.5, 18.5])
     fig.update_yaxes(fixedrange=True)
     fig.update_layout(margin=margin)
     scoreDistribution_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
@@ -297,9 +297,10 @@ def golferSummary(request, golfer):
     gross = Score.objects.filter(golfer=golfer, week=lastWeek, year=2021).aggregate(Sum('score'))['score__sum']
     net = Score.objects.filter(golfer=golfer, week=lastWeek, year=2021).aggregate(Sum('score'))['score__sum'] - round(getHcp(golfer, lastWeek))
 
-    weekData = list(range(1, week + 2))
+    weekData = list(range(1, week + 1))
 
-    for week in range(2, week + 2):
+    # from 2 to week + 2 because handicaps are offset a week
+    for week in range(2, week + 1):
         hcpPlot.append(handicapData[str(week)])
 
     x_diff = []
@@ -314,25 +315,25 @@ def golferSummary(request, golfer):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=x_diff, y=y_diff, name='You', hoverinfo="y"))
     fig.add_trace(go.Scatter(x=x_diff, y=y_diffOpp, name='Opp', hoverinfo="y"))
-    fig.update_xaxes(title="Week", fixedrange=True)
+    fig.update_xaxes(title="Week", fixedrange=True, range=[.5, week+.5])
     fig.update_yaxes(title="Net Difference", fixedrange=True)
     fig.update_layout(title="Net Difference Over/Under Par", margin=margin)
     netDiff_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = go.Figure(data=go.Scatter(x=weekData, y=hcpPlot, hoverinfo="y"))
-    fig.update_xaxes(title="Week", fixedrange=True)
+    fig.update_xaxes(title="Week", fixedrange=True, range=[.5, week+.5])
     fig.update_yaxes(title="Handicap", fixedrange=True)
     fig.update_layout(title="Handicap By Week", margin=margin)
     hcp_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = go.Figure(data=go.Scatter(x=weekData, y=data['pointsArray'], hoverinfo="y"))
-    fig.update_xaxes(title="Week", fixedrange=True)
+    fig.update_xaxes(title="Week", fixedrange=True, range=[.5, week+.5])
     fig.update_yaxes(title="Points", fixedrange=True)
     fig.update_layout(title="Points Per Week", margin=margin)
     points_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = go.Figure(data=go.Scatter(x=weekData, y=data['scoreArray'], hoverinfo="y"))
-    fig.update_xaxes(title="Week", fixedrange=True)
+    fig.update_xaxes(title="Week", fixedrange=True, range=[.5, week+.5])
     fig.update_yaxes(title="Score", fixedrange=True)
     fig.update_layout(title="Score Per Week", margin=margin)
     scores_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
