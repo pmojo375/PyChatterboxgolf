@@ -218,6 +218,8 @@ def games(request):
 def golferSummary(request, golfer):
 
     year = 2021
+    margin = dict(l=5, r=15, b=5, t=60, pad=4)
+    config = {'displayModeBar': False}
 
     golferName = Golfer.objects.get(id=golfer).name
     subs = Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week')
@@ -227,7 +229,6 @@ def golferSummary(request, golfer):
 
     data = golferData(golfer)
     dataHcp = hcpData2021(golfer)
-    stDevHole = stDevHoles(golfer)
     aveHoleScores = []
     handicapData = {}
     hcpPlot = []
@@ -235,50 +236,30 @@ def golferSummary(request, golfer):
     week = getWeek()
     netDiff = getNetDiff(golfer, subs=subs)
 
-    for item in list(stDevHole.values()):
+    for item in list(stDevHoles(golfer).values()):
         stDevHoleList.append(round(item, 3))
 
-    fig = px.bar(y=list(stDevHole.values()), x=holes, title="Standard Deviation Per Hole",
-                 text=stDevHoleList, labels={"value": "StDev", "color": "StDev"})
+    fig = px.bar(y=stDevHoleList, x=holes, title="Standard Deviation Per Hole", text=stDevHoleList, labels={"x": "Hole", "y": "StDev"})
     fig.update_xaxes(title="Hole", fixedrange=True)
     fig.update_yaxes(title="Standard Dev.", fixedrange=True)
-    fig.update_layout(margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    holeStd_div = plot(fig, output_type='div', include_plotlyjs=False,
-                       config={'displayModeBar': False})
+    fig.update_layout(margin=margin)
+    holeStd_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     for data2 in data['aveHoleScores']:
         aveHoleScores.append(round(data2, 2))
 
-    fig = px.bar(y=aveHoleScores, x=holes, title="Average Over Par",
-                 text=aveHoleScores, labels={"value": "Score", "color": "Score"})
+    fig = px.bar(y=aveHoleScores, x=holes, title="Average Over Par", text=aveHoleScores, labels={"x": "Hole", "y": "Average"})
     fig.update_xaxes(title="Hole", fixedrange=True)
     fig.update_yaxes(title="Over Par", fixedrange=True)
-    fig.update_layout(margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    plot_div = plot(fig, output_type='div', include_plotlyjs=False,
-                    config={'displayModeBar': False})
+    fig.update_layout(margin=margin)
+    plot_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = px.bar(data['holeData'], labels={
                  "index": "Hole", "variable": "Result", "value": "Percent"}, title="Score Distribution")
     fig.update_xaxes(fixedrange=True)
     fig.update_yaxes(fixedrange=True)
-    fig.update_layout(margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    scoreDistribution_div = plot(
-        fig, output_type='div', include_plotlyjs=False, config={'displayModeBar': False})
+    fig.update_layout(margin=margin)
+    scoreDistribution_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     handicapCalcData = []
     handicapScores = []
@@ -313,12 +294,10 @@ def golferSummary(request, golfer):
             # golfer never played!
             check = True
 
-    gross = Score.objects.filter(
-        golfer=golfer, week=lastWeek, year=2021).aggregate(Sum('score'))['score__sum']
-    net = Score.objects.filter(golfer=golfer, week=lastWeek, year=2021).aggregate(
-        Sum('score'))['score__sum'] - round(getHcp(golfer, lastWeek))
+    gross = Score.objects.filter(golfer=golfer, week=lastWeek, year=2021).aggregate(Sum('score'))['score__sum']
+    net = Score.objects.filter(golfer=golfer, week=lastWeek, year=2021).aggregate(Sum('score'))['score__sum'] - round(getHcp(golfer, lastWeek))
 
-    weekData = list(range(2, week + 2))
+    weekData = list(range(1, week + 2))
 
     for week in range(2, week + 2):
         hcpPlot.append(handicapData[str(week)])
@@ -337,50 +316,26 @@ def golferSummary(request, golfer):
     fig.add_trace(go.Scatter(x=x_diff, y=y_diffOpp, name='Opp'))
     fig.update_xaxes(title="Week", fixedrange=True)
     fig.update_yaxes(title="Net Difference", fixedrange=True)
-    fig.update_layout(title="Net Difference Over/Under Par", margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    netDiff_div = plot(fig, output_type='div', include_plotlyjs=False, config={
-                       'displayModeBar': False})
+    fig.update_layout(title="Net Difference Over/Under Par", margin=margin)
+    netDiff_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = go.Figure(data=go.Scatter(x=weekData, y=hcpPlot))
     fig.update_xaxes(title="Week", fixedrange=True)
     fig.update_yaxes(title="Handicap", fixedrange=True)
-    fig.update_layout(title="Handicap By Week", margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    hcp_div = plot(fig, output_type='div', include_plotlyjs=False,
-                   config={'displayModeBar': False})
+    fig.update_layout(title="Handicap By Week", margin=margin)
+    hcp_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = go.Figure(data=go.Scatter(x=weekData, y=data['pointsArray']))
     fig.update_xaxes(title="Week", fixedrange=True)
     fig.update_yaxes(title="Points", fixedrange=True)
-    fig.update_layout(title="Points Per Week", margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    points_div = plot(fig, output_type='div', include_plotlyjs=False, config={
-                      'displayModeBar': False})
+    fig.update_layout(title="Points Per Week", margin=margin)
+    points_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig = go.Figure(data=go.Scatter(x=weekData, y=data['scoreArray']))
     fig.update_xaxes(title="Week", fixedrange=True)
     fig.update_yaxes(title="Score", fixedrange=True)
-    fig.update_layout(title="Score Per Week", margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    scores_div = plot(fig, output_type='div', include_plotlyjs=False, config={
-                      'displayModeBar': False})
+    fig.update_layout(title="Score Per Week", margin=margin)
+    scores_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     context = data
     context['lastWeek'] = lastWeek
