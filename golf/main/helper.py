@@ -841,11 +841,11 @@ def getWeek(**kwargs):
     season_weeks = 20
 
     # get the number of rainouts for the season
-    dates = Date.objects.filter(rain__year=2021)
+    #dates = Date.objects.filter(rain__year=2021)
 
-    rain_outs = dates.count()
+    #rain_outs = dates.count()
 
-    season_weeks + rain_outs
+    #season_weeks + rain_outs
 
     # iterate through all of the seasons weeks
     for w in range(1, season_weeks + 1):
