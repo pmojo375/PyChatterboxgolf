@@ -837,9 +837,19 @@ def getWeek(**kwargs):
     # initalize the week
     week = 1
 
+    # initialize the number of weeks in the season
+    season_weeks = 20
+
+    # get the number of rainouts for the season
+    dates = Date.objects.filter(rain__year=2021)
+
+    rain_outs = dates.count()
+
+    season_weeks + rain_outs
+
     # iterate through all of the seasons weeks
-    for w in range(1, 21):
-        if now > start + w * td_week
+    for w in range(1, season_weeks + 1):
+        if now > start + w * td_week:
             week = w
 
     # offset by one week if not all scores are posted
@@ -887,7 +897,7 @@ def getWeek2020(**kwargs):
 
     # iterate through all of the seasons weeks
     for w in range(1, 21):
-        if now > start + w * td_week
+        if now > start + w * td_week:
             week = w
 
     # offset by one week if not all scores are posted
