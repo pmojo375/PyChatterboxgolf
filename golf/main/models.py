@@ -17,6 +17,14 @@ class Golfer(models.Model):
     ]
 
 
+class Date(models.Model):
+    id = models.AutoField(primary_key=True)
+    date = models.DateTimeField()
+    rain = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
+
 class Game(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=80)

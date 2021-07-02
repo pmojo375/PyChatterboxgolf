@@ -805,10 +805,10 @@ def getRoundPoints(golfer_id, week, **kwargs):
     return points
 
 def getWeek(**kwargs):
-    """Gets the week number from the current date. Time is offset by 4 hours
-    because the native python datetime.now() function returns UTC. The week
+    """Gets the week number from the current date. The week
     number returned is the last week we should have played but is offset by a
-    week if no scores are posted for that week.
+    week if no scores are posted for that week if the offset flag is not set to
+    false.
 
     Parameters
     ----------
@@ -825,71 +825,48 @@ def getWeek(**kwargs):
 
     offset = kwargs.get('offset', True)
 
-    # current time adjusted for timezone
-    currentDateTime = datetime.now() + timedelta(hours=-4)
+    # current datetime
+    now = datetime.now()
 
-    if currentDateTime > datetime(2021, 4, 20, 16):
-        week = 0
-    if currentDateTime > datetime(2021, 4, 27, 16):
-        week = 1
-    if currentDateTime > datetime(2021, 5, 4, 16):
-        week = 2
-    if currentDateTime > datetime(2021, 5, 11, 16):
-        week = 3
-    if currentDateTime > datetime(2021, 5, 18, 16):
-        week = 4
-    if currentDateTime > datetime(2021, 5, 25, 16):
-        week = 5
-    if currentDateTime > datetime(2021, 6, 1, 16):
-        week = 6
-    if currentDateTime > datetime(2021, 6, 8, 16):
-        week = 7
-    if currentDateTime > datetime(2021, 6, 15, 16):
-        week = 8
-    if currentDateTime > datetime(2021, 6, 22, 16):
-        week = 9
-    if currentDateTime > datetime(2021, 6, 29, 16):
-        week = 10
-    if currentDateTime > datetime(2021, 7, 6, 16):
-        week = 11
-    if currentDateTime > datetime(2021, 7, 13, 16):
-        week = 12
-    if currentDateTime > datetime(2021, 7, 20, 16):
-        week = 13
-    if currentDateTime > datetime(2021, 7, 27, 16):
-        week = 14
-    if currentDateTime > datetime(2021, 8, 3, 16):
-        week = 15
-    if currentDateTime > datetime(2021, 8, 10, 16):
-        week = 16
-    if currentDateTime > datetime(2021, 8, 17, 16):
-        week = 17
-    if currentDateTime > datetime(2021, 8, 24, 16):
-        week = 18
-    if currentDateTime > datetime(2021, 8, 31, 16):
-        week = 19
-    if currentDateTime > datetime(2021, 9, 7, 16):
-        week = 19
+    # the starting date
+    start = datetime(2021, 4, 20, 16)
 
-    if week != 0:
-        # offset by one week if not all scores are posted
-        if offset:
-            if Score.objects.filter(week=week, year=2021).exists():
-                if Score.objects.filter(week=week, year=2021).count() == 180:
-                    week = week
-                else:
-                    week = week - 1
-            else:
-                week = week - 1
+    # a time delta of one week
+    td_week = timedelta(days=7)
+
+    # initalize the week
+    week = 1
+
+    # initialize the number of weeks in the season
+    season_weeks = 20
+
+    # get the number of rainouts for the season
+    #dates = Date.objects.filter(rain__year=2021)
+
+    #rain_outs = dates.count()
+
+    #season_weeks + rain_outs
+
+    # iterate through all of the seasons weeks
+    for w in range(1, season_weeks + 1):
+        if now > start + w * td_week:
+            week = w
+
+    # offset by one week if not all scores are posted
+    if offset:
+        if Score.objects.filter(week=week, year=2021).count() == 180:
+            week = week
+        else:
+            week = week - 1
 
     return week
 
 
 def getWeek2020(**kwargs):
-    """Gets the week number from the current date. Time is offset by 4 hours
-    because the native python datetime.now() function returns UTC. The week
+    """Gets the week number from the current date. The week
     number returned is the last week we should have played but is offset by a
-    week if no scores are posted for that week.
+    week if no scores are posted for that week if the offset flag is not set to
+    false.
 
     Parameters
     ----------
@@ -906,57 +883,26 @@ def getWeek2020(**kwargs):
 
     offset = kwargs.get('offset', True)
 
-    # current time adjusted for timezone
-    currentDateTime = datetime.now() + timedelta(hours=-4)
+    # current datetime
+    now = datetime.now()
 
-    if currentDateTime > datetime(2020, 5, 19, 16):
-        week = 1
-    if currentDateTime > datetime(2020, 5, 26, 16):
-        week = 2
-    if currentDateTime > datetime(2020, 6, 2, 16):
-        week = 3
-    if currentDateTime > datetime(2020, 6, 9, 16):
-        week = 4
-    if currentDateTime > datetime(2020, 6, 16, 16):
-        week = 5
-    if currentDateTime > datetime(2020, 6, 23, 16):
-        week = 6
-    if currentDateTime > datetime(2020, 6, 30, 16):
-        week = 7
-    if currentDateTime > datetime(2020, 7, 7, 16):
-        week = 8
-    if currentDateTime > datetime(2020, 7, 14, 16):
-        week = 9
-    if currentDateTime > datetime(2020, 7, 21, 16):
-        week = 10
-    if currentDateTime > datetime(2020, 7, 28, 16):
-        week = 11
-    if currentDateTime > datetime(2020, 8, 4, 16):
-        week = 12
-    if currentDateTime > datetime(2020, 8, 11, 16):
-        week = 13
-    if currentDateTime > datetime(2020, 8, 18, 16):
-        week = 14
-    if currentDateTime > datetime(2020, 8, 25, 16):
-        week = 14
-    if currentDateTime > datetime(2020, 9, 1, 16):
-        week = 14
-    if currentDateTime > datetime(2020, 9, 8, 16):
-        week = 15
-    if currentDateTime > datetime(2020, 9, 15, 16):
-        week = 16
-    if currentDateTime > datetime(2020, 9, 22, 16):
-        week = 17
-    if currentDateTime > datetime(2020, 9, 29, 16):
-        week = 18
-    if currentDateTime > datetime(2020, 10, 6, 16):
-        week = 19
-    if currentDateTime > datetime(2020, 10, 13, 16):
-        week = 20
+    # the starting date
+    start = datetime(2020, 5, 19, 16)
 
-    # offset by one week if no scores posted
+    # a time delta of one week
+    td_week = timedelta(days=7)
+
+    # initalize the week
+    week = 1
+
+    # iterate through all of the seasons weeks
+    for w in range(1, 21):
+        if now > start + w * td_week:
+            week = w
+
+    # offset by one week if not all scores are posted
     if offset:
-        if Score.objects.filter(week=week, year=2020).exists():
+        if Score.objects.filter(week=week, year=2021).count() == 180:
             week = week
         else:
             week = week - 1
