@@ -5,8 +5,13 @@ from main.models import *
 class GolferAdmin(admin.ModelAdmin):
     list_display = ('name', 'id', 'team', 'year')
 
+
 class GameAdmin(admin.ModelAdmin):
     list_display = ('name', 'desc', 'week', 'year')
+
+
+class DateAdmin(admin.ModelAdmin):
+    list_display = ('date', 'rain')
 
 
 class GameEntryAdmin(admin.ModelAdmin):
@@ -48,6 +53,7 @@ class TiebreakerAdmin(admin.ModelAdmin):
 
 admin.site.register(Golfer, GolferAdmin)
 admin.site.register(Game, GameAdmin)
+admin.site.register(Date, DateAdmin)
 admin.site.register(GameEntry, GameEntryAdmin)
 admin.site.register(SkinEntry, SkinEntryAdmin)
 admin.site.register(HandicapReal, HandicapRealAdmin)
