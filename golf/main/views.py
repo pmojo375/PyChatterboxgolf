@@ -299,6 +299,7 @@ def golferSummary(request, golfer):
 
     weekData = list(range(1, week + 1))
 
+    hcpPlot.append(handicapData['2'])
     # from 2 to week + 2 because handicaps are offset a week
     for week in range(2, week + 1):
         hcpPlot.append(handicapData[str(week)])
