@@ -365,19 +365,27 @@ def golferSummary(request, golfer):
 
 def leagueStats(request):
 
-    par = {}
     year = 2021
+    par = {}
     holeHcp = {}
     week = getWeek()
+    margin = dict(l=5, r=15, b=5, t=60, pad=4)
+    config = {'displayModeBar': False}
 
-    # populate par and hole handicap arrays for use later in the view
-    for hole in holes:
-        hole_data = Hole.objects.get(year=2020, hole=hole)
-        par[str(hole)] = hole_data.par
-        holeHcp[str(hole)] = hole_data.handicap9
+    row_even_color = 'lightgrey'
+    row_odd_color = 'white'
+
+    row_colors = [row_odd_color, row_even_color, row_odd_color, row_even_color]
 
     # sub records for the given year
     subs = Subrecord.objects.filter(year=year).values('sub_id', 'absent_id', 'week')
+
+    hole_data = Hole.objects.filter(year=2020).values('hole', 'par', 'handicap9')
+
+    # populate par and hole handicap arrays for use later in the view
+    for hole in hole_data:
+        par[str(hole['hole'])] = hole['par']
+        holeHcp[str(hole['hole'])] = hole['handicap9']
 
     data = getLeagueStats(week, hole_hcp=holeHcp, par=par, subs=subs)
 
@@ -389,31 +397,18 @@ def leagueStats(request):
     for average_hole_score in data['aveHoleScores']:
         ave_hole_scores.append(round(average_hole_score, 2))
 
-    fig = px.bar(ave_hole_scores, text=ave_hole_scores, labels={
-                 "value": "Score", "color": "Score"})
+    fig = px.bar(ave_hole_scores, text=ave_hole_scores, labels={"x": "Hole", "y": "Score"}).update_traces(hoverinfo="y")
     fig.update_xaxes(title="Hole", fixedrange=True)
     fig.update_yaxes(title="Over Par", fixedrange=True)
-    fig.update_layout(title="League Average Over Par", showlegend=False, margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    plot_div = plot(fig, output_type='div', include_plotlyjs=False,
-                    config={'displayModeBar': False})
+    fig.update_layout(title="League Average Over Par", showlegend=False, margin=margin)
+    plot_div = plot(fig, output_type='div', include_plotlyjs=False, config=config)
 
     fig2 = px.bar(data['holeData'], labels={
                   "index": "Hole", "variable": "Result", "value": "Percent"})
     fig2.update_xaxes(fixedrange=True)
     fig2.update_yaxes(fixedrange=True)
-    fig.update_layout(title="Score Distribution", margin=dict(
-        l=5,
-        r=15,
-        b=5,
-        t=60,
-        pad=4))
-    plot_div2 = plot(fig2, output_type='div', include_plotlyjs=False, config={
-                     'displayModeBar': False})
+    fig.update_layout(title="Score Distribution", margin=margin)
+    plot_div2 = plot(fig2, output_type='div', include_plotlyjs=False, config=config)
 
     for wk in range(1, week + 2):
         hcp_data[str(wk)] = []
@@ -437,14 +432,13 @@ def leagueStats(request):
         table_data.append(hcp_data[str(wk)])
 
     header_color = 'grey'
-    row_even_color = 'lightgrey'
-    row_odd_color = 'white'
+
 
     data2 = [go.Table(
         header=dict(values=table_head, line_color='darkslategray', fill_color=header_color, align=[
                     'left', 'center'], font=dict(color='white', size=8)),
         columnwidth=column_width,
-        cells=dict(values=table_data, line_color='darkslategray', fill_color=[[row_odd_color, row_even_color, row_odd_color, row_even_color] * 5], align=['left', 'center'], font=dict(color='darkslategray', size=9)))]
+        cells=dict(values=table_data, line_color='darkslategray', fill_color=[row_colors * 5], align=['left', 'center'], font=dict(color='darkslategray', size=9)))]
 
     table = go.Figure(data2)
 
@@ -452,8 +446,7 @@ def leagueStats(request):
     table.update_xaxes(fixedrange=True)
     table.update_yaxes(automargin=True, fixedrange=True)
 
-    table_div = plot(table, output_type='div',
-                     include_plotlyjs=False, config={'displayModeBar': False})
+    table_div = plot(table, output_type='div', include_plotlyjs=False, config=config)
 
     table_data = [golfer_names]
     table_head = ['<b>Name</b>']
@@ -476,12 +469,8 @@ def leagueStats(request):
                     font=dict(color='white',
                               size=8)),
                     columnwidth=column_width,
-                    cells=dict(values=table_data,
-                               line_color='darkslategray',
-                               fill_color=[[row_odd_color, row_even_color, row_odd_color, row_even_color] * 5],
-                               align=['left', 'center'],
-                               font=dict(color='darkslategray',
-                                         size=9)))]
+                    cells=dict(values=table_data, line_color='darkslategray', fill_color=[row_colors * 5],
+                               align=['left', 'center'], font=dict(color='darkslategray', size=9)))]
 
     points_table_fig = go.Figure(points_table)
 
@@ -489,8 +478,7 @@ def leagueStats(request):
     points_table_fig.update_yaxes(automargin=True, fixedrange=True)
     points_table_fig.update_xaxes(fixedrange=True)
 
-    points_div = plot(points_table_fig, output_type='div',
-                      include_plotlyjs=False, config={'displayModeBar': False})
+    points_div = plot(points_table_fig, output_type='div', include_plotlyjs=False, config=config)
 
     context = data
     context['table_div'] = table_div
@@ -541,7 +529,7 @@ def aveScores(request):
         golferIndex = golferIndex + 1
 
     fig = ff.create_annotated_heatmap(data, y=golferNames, x=holes, colorscale=[
-                                      [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True)
+                                      [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True, zmin=-1, zmax=4)
     fig.update_traces(
         hovertemplate="Golfer: %{y}<br>Hole: %{x}<br>Average: %{z:.2f}<extra></extra>")
     fig.update_xaxes(fixedrange=True)
@@ -584,7 +572,7 @@ def aveScores(request):
         golferIndex = golferIndex + 1
 
     fig = ff.create_annotated_heatmap(data, y=golferNames, x=holes, colorscale=[
-                                      [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True)
+                                      [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True, zmin=-1, zmax=4)
     fig.update_traces(
         hovertemplate="Golfer: %{y}<br>Hole: %{x}<br>Average: %{z:.2f}<extra></extra>")
     fig.update_xaxes(fixedrange=True)
@@ -624,7 +612,7 @@ def aveScores(request):
         golferIndex = golferIndex + 1
 
     fig = ff.create_annotated_heatmap(data, y=golferNames, x=holes, colorscale=[
-                                      [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True)
+                                      [0, 'rgb(0,128,0)'], [.5, 'rgb(255,255,255)'], [1, 'rgb(255,0,0)']], font_colors=["black", "black"], showscale=True, zmin=-1, zmax=4)
     fig.update_traces(
         hovertemplate="Golfer: %{y}<br>Hole: %{x}<br>Average: %{z:.2f}<extra></extra>")
     fig.update_xaxes(fixedrange=True)

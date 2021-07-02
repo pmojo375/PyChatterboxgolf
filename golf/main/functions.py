@@ -253,6 +253,7 @@ def getWeeklyScores(week, year, **kwargs):
 
 # this is a mess of logic - consider cleaning up or seperating
 def getLeagueStats(week, **kwargs):
+    
     par = {}
     hole_hcp = {}
 
@@ -260,10 +261,13 @@ def getLeagueStats(week, **kwargs):
         hole_hcp = kwargs.get('hole_hcp')
         par = kwargs.get('par')
     else:
-        for hole in range(1, 19):
-            hole_data = Hole.objects.get(year=2020, hole=hole)
-            par[str(hole)] = hole_data.par
-            hole_hcp[str(hole)] = hole_data.handicap9
+        hole_data = Hole.objects.filter(year=2020).values('hole', 'par', 'handicap9')
+
+        # populate par and hole handicap arrays for use later in the view
+        for hole in hole_data:
+            par[str(hole['hole'])] = hole['par']
+            holeHcp[str(hole['hole'])] = hole['handicap9']
+
     subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
 
@@ -290,7 +294,7 @@ def getLeagueStats(week, **kwargs):
     fours = {}
     worse = {}
 
-    for hole in range(1, 19):
+    for hole in holes:
         hole_string = str(hole)
         birdies[hole_string] = 0
         pars[hole_string] = 0
@@ -300,22 +304,23 @@ def getLeagueStats(week, **kwargs):
         fours[hole_string] = 0
         worse[hole_string] = 0
 
-        ave_hole_score = Score.objects.filter(year=year, hole=hole).aggregate(Avg('score'))['score__avg'] - par[
-            str(hole)]
+        ave_hole_score = Score.objects.filter(year=year, hole=hole).aggregate(Avg('score'))['score__avg'] - par[str(hole)]
         ave_hole_scores.append(ave_hole_score)
 
+        # update min/max averages
         if ave_hole_score < min_ave:
             min_ave = ave_hole_score
         if ave_hole_score > max_ave:
             max_ave = ave_hole_score
 
-        scores = Score.objects.all().filter(year=2021, hole=hole)
+        scores = Score.objects.all().filter(year=2021, hole=hole).values('score')
+        
         hole_par = par[hole_string]
 
         total = 0
 
         for score in scores:
-            temp = score.score - hole_par
+            temp = score['score'] - hole_par
             total = total + 1
             if temp == -1:
                 birdies[hole_string] = birdies[hole_string] + 1
@@ -345,14 +350,14 @@ def getLeagueStats(week, **kwargs):
 
         golfer_names = {}
 
-        golfers = Golfer.objects.filter(year=year).exclude(team=0)
+        golfers = Golfer.objects.filter(year=year).exclude(team=0).values('id', 'name')
         for golfer in golfers:
-            golfer_names[str(golfer.id)] = golfer.name
+            golfer_names[str(golfer['id'])] = golfer['name']
 
     golfers = getGolferIds(2021)
 
     for wk in range(1, week + 1):
-        is_front = Matchup.objects.filter(week=week, year=year).first().front
+        is_front = Matchup.objects.filter(week=wk, year=year).first().front
 
         for golfer in golfers:
             gross = Score.objects.filter(golfer=golfer, week=wk, year=year).aggregate(Sum('score'))['score__sum']
