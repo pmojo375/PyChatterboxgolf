@@ -6,6 +6,10 @@ from django.db.models import Sum
 from django.db.models import Avg
 from django.db.models import Q
 from operator import *
+import logging
+
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
 
 teams = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 holes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
@@ -21,6 +25,7 @@ def makeRounds(**kwargs):
 
     for golfer in golfers:
         for week in range(1, getWeek() + 1):
+            logger.info(f'Making round entry for golfer ID {golfer} in week {week}')
             makeRound(golfer, week, 2021, subs=subs)
 
 
@@ -31,8 +36,9 @@ def allScoresIn():
 
         if not HandicapReal.objects.filter(year=2021, week=week+1).exists():
             generateHcp2021()
-
             makeRounds()
+        else:
+            logger.info(f'Scores in for week {week} but handicaps already exist')
 
 
 

@@ -16,6 +16,10 @@ from plotly.subplots import make_subplots
 import plotly.figure_factory as ff
 import plotly.graph_objs as go
 from django.views.decorators.cache import cache_page
+import logging
+
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
 
 holes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 holes_front = [1, 2, 3, 4, 5, 6, 7, 8, 9]

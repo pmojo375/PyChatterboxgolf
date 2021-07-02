@@ -6,7 +6,10 @@ from django.db.models import Avg
 from django.db.models import Max, Min
 from main.helper import *
 import statistics
+import logging
 
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
 
 def stDevScores(golfer, **kwargs):
     """Gets the standard deviation of a golfers scores for the season.
@@ -755,6 +758,8 @@ def generateHcp2021():
     for golfer in golfers:
         data = hcpData2021(golfer)
         updateRealHcp(golfer, data)
+
+    logger.info(f'Handicaps created and updated')
 
 def getGolfers3rdWeekPlayed(golfer_id, **kwargs):
     """Gets the week number the golfer hit 3 total weeks of data for the season.
