@@ -304,13 +304,16 @@
     box-shadow: 0 0 0 2px yellow inset, 0 0 0 4px red inset;
     background-color: black;
 }
-
-.scorecard {
-    alignment: center;
-    border-spacing: 0;
-    border-collapse: collapse;
-    margin-left: auto;
-    margin-right: auto;
+@media screen {
+    .scorecard {
+        alignment: center;
+        border-spacing: 0;
+        border-collapse: collapse;
+        margin-left: auto;
+        margin-right: auto;
+        undefined;table-layout: fixed;
+        width: 568px;
+    }
 }
 
 .scorecard td {
@@ -397,4 +400,18 @@
     vertical-align: center;
     color: #FFFFFF;
     background-color: #272727;
+}
+
+@media print {
+    .scorecard {
+        alignment: center;
+        border-spacing: 0;
+        border-collapse: collapse;
+        margin-left: auto;
+        margin-right: auto;
+        undefined;table-layout: fixed;
+        width: 100%;
+        margin-top: 18%;
+        margin-bottom: 18%;
+    }
 }
