@@ -447,7 +447,7 @@ def getStandingsFast(week, **kwargs):
             golfer2SecondHcp = 0
 
 
-        standings.append({'golfer1FirstHcp': golfer1FirstHcp, 'golfer2FirstHcp': golfer2FirstHcp, 'golfer1SecondHcp': golfer1SecondHcp, 'golfer1SecondHcp': golfer1SecondHcp, 'golfer1': team_golfers[0].name, 'golfer2': team_golfers[1].name, 'first': firstHalfTeam, 'second': secondHalfTeam, 'total': teamPoints})
+        standings.append({'golfer1FirstHcp': golfer1FirstHcp, 'golfer2FirstHcp': golfer2FirstHcp, 'golfer1SecondHcp': golfer1SecondHcp, 'golfer2SecondHcp': golfer2SecondHcp, 'golfer1': team_golfers[0].name, 'golfer2': team_golfers[1].name, 'first': firstHalfTeam, 'second': secondHalfTeam, 'total': teamPoints})
 
     return standings
 
