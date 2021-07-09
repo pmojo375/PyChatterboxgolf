@@ -118,12 +118,12 @@
             <tr>
               <td class="name">{{ team.golfer1 }}</td>
               <td class="score" rowspan="2">{{ team.total }}</td>
-              <td class="hcp">{{ team.golfer1Hcp }}</td>
+              <td class="hcp">{{ team.golfer1SecondHcp }}</td>
             </tr>
 
             <tr>
               <td class="name">{{ team.golfer2 }}</td>
-              <td class="hcp">{{ team.golfer2Hcp }}</td>
+              <td class="hcp">{{ team.golfer2SecondHcp }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -149,20 +149,20 @@
             {% for team in firstHalfStandings %}
             <tr>
               <td class="name">{{ team.golfer1 }}</td>
-              <td class="score" rowspan="2">{{ team.total }}</td>
-              <td class="hcp">{{ team.golfer1Hcp }}</td>
+              <td class="score" rowspan="2">{{ team.first }}</td>
+              <td class="hcp">{{ team.golfer1FirstHcp }}</td>
             </tr>
 
             <tr>
               <td class="name">{{ team.golfer2 }}</td>
-              <td class="hcp">{{ team.golfer2Hcp }}</td>
+              <td class="hcp">{{ team.golfer2FirstHcp }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
 
-      {% if secondHald %} 
+      {% if secondHalf %} 
       <div class="col">
         <p class="text-center"> Second Half Standings</p>
 
@@ -182,13 +182,13 @@
             {% for team in secondHalfStandings %}
             <tr>
               <td class="name">{{ team.golfer1 }}</td>
-              <td class="score" rowspan="2">{{ team.total }}</td>
-              <td class="hcp">{{ team.golfer1Hcp }}</td>
+              <td class="score" rowspan="2">{{ team.second }}</td>
+              <td class="hcp">{{ team.golfer1SecondHcp }}</td>
             </tr>
 
             <tr>
               <td class="name">{{ team.golfer2 }}</td>
-              <td class="hcp">{{ team.golfer2Hcp }}</td>
+              <td class="hcp">{{ team.golfer2SecondHcp }}</td>
             </tr>
             {% endfor %}
           </tbody>

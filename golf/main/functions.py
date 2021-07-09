@@ -415,7 +415,7 @@ def getStandingsFast(week, **kwargs):
     # get the total points for each half if needed
     if week > 9:
         firstHalfPoints = getPointsFast(9, subs=subs)
-        secondHalfPoints = getPointsFast(week, subs=subs)
+        secondHalfPoints = getPointsFast(week, subs=subs, second=True)
     else:
         firstHalfPoints = getPointsFast(week, subs=subs)
         secondHalfPoints = 0
@@ -431,12 +431,23 @@ def getStandingsFast(week, **kwargs):
             firstHalfTeam = firstHalfPoints[team_golfers[0].id] + firstHalfPoints[team_golfers[1].id]
             secondHalfTeam = secondHalfPoints[team_golfers[0].id] + secondHalfPoints[team_golfers[1].id]
             teamPoints = firstHalfTeam + secondHalfTeam
+
+            golfer1FirstHcp = getHcp(team_golfers[0].id, 10)
+            golfer2FirstHcp = getHcp(team_golfers[1].id, 10)
+            golfer1SecondHcp = getHcp(team_golfers[0].id, week+1)
+            golfer2SecondHcp = getHcp(team_golfers[1].id, week+1)
         else:
             teamPoints = firstHalfPoints[team_golfers[0].id] + firstHalfPoints[team_golfers[1].id]
             firstHalfTeam = teamPoints
             secondHalfTeam = 0
 
-        standings.append({'golfer1Hcp': getHcp(team_golfers[0].id, week+1), 'golfer2Hcp': getHcp(team_golfers[1].id, week+1), 'golfer1': team_golfers[0].name, 'golfer2': team_golfers[1].name, 'first': firstHalfTeam, 'second': secondHalfTeam, 'total': teamPoints})
+            golfer1FirstHcp = getHcp(team_golfers[0].id, week+1)
+            golfer2FirstHcp = getHcp(team_golfers[1].id, week+1)
+            golfer1SecondHcp = 0
+            golfer2SecondHcp = 0
+
+
+        standings.append({'golfer1FirstHcp': golfer1FirstHcp, 'golfer2FirstHcp': golfer2FirstHcp, 'golfer1SecondHcp': golfer1SecondHcp, 'golfer1SecondHcp': golfer1SecondHcp, 'golfer1': team_golfers[0].name, 'golfer2': team_golfers[1].name, 'first': firstHalfTeam, 'second': secondHalfTeam, 'total': teamPoints})
 
     return standings
 
@@ -449,6 +460,8 @@ def getPointsFast(week, **kwargs):
         Sets the week you want the accumulated points for.
     year : int, optional
         Sets the year you want the accumulated points for (default is the current year).
+    second : bool, optional
+        Flag to indicate you are wanting the second half points (default is false).
     seperate_subs : bool, optional
         Set to true if you want to pull the subs' points out of the absent golfers totals
         and include the subs in the dictionary results. This would be set to true in places
@@ -464,10 +477,17 @@ def getPointsFast(week, **kwargs):
 
     # get optional parameters
     year = kwargs.get('year', 2021)
+    second = kwargs.get('second', False)
     seperate_subs = kwargs.get('seperate_subs', False)
     subs = kwargs.get('subs', Subrecord.objects.filter(year=2021).values('sub_id', 'absent_id', 'week'))
 
-    week_range = range(1, week + 1)
+
+    if second:
+        start_week = 10
+    else:
+        start_week = 1
+
+    week_range = range(start_week, week + 1)
 
     golferPoints = {}
 
