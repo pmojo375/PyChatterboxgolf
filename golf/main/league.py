@@ -801,7 +801,7 @@ def copyHcp():
     week = getWeek()
 
     # get all the golfers for the 2021 season
-    golfers = get2021GolferObjects(subs=True)
+    golfers = getGolferObjects(2021, subs=True)
 
     # loop through golfers
     for golfer in golfers:
@@ -827,6 +827,10 @@ def copyHcp():
                 # add week to weeks played array
                 weeksPlayed.append(wk)
 
+                # update the last hcp
+                if HandicapReal.objects.filter(golfer=golfer.id, week=wk, year=2021).exists():
+                    latestHcp = HandicapReal.objects.get(golfer=golfer.id, week=wk, year=2021)
+
                 # if week played is the 4th week the golfer has played
                 if len(weeksPlayed) == 4:
 
@@ -845,21 +849,16 @@ def copyHcp():
                             handicap = HandicapReal.objects.get(golfer=golfer.id, week=rd, year=2021)
                             handicap.handicap = fourthHcp
                             handicap.save()
+                            print(f'Has 4 - Wrote {fourthHcp} to {golfer.name} on week {rd}')
                         else:
                             HandicapReal(golfer=golfer.id, week=rd, year=2021, handicap=fourthHcp).save()
+                            print(f'Has 4 NO EXISTING HCP - Wrote {fourthHcp} to {golfer.name} on week {rd}')
 
                     break
+                    
 
             # last week of loop (next played week)
             if wk == week + 1:
-                print(golfer.name)
-
-                # check if handicap exists already
-                if HandicapReal.objects.filter(golfer=golfer.id, week=wk, year=2021).exists():
-                    handicap = HandicapReal.objects.get(golfer=golfer.id, week=wk, year=2021)
-
-                    # get the handicap to apply to the first 3 weeks played
-                    latestHcp = handicap.handicap
 
                 # iterate through the weeks the golfer has played and set them all to the handicap on the 4th round played
                 for rd in weeksPlayed:
@@ -869,6 +868,8 @@ def copyHcp():
                         handicap = HandicapReal.objects.get(golfer=golfer.id, week=rd, year=2021)
                         handicap.handicap = latestHcp
                         handicap.save()
+                        print(f'Under 3 - Wrote {latestHcp} to {golfer.name} on week {rd}')
                     else:
                         HandicapReal(golfer=golfer.id, week=rd, year=2021, handicap=latestHcp).save()
+                        print(f'Under 3 NO EXISTING HCP - Wrote {latestHcp} to {golfer.name} on week {rd}')
 
