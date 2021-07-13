@@ -832,7 +832,7 @@ def copyHcp():
                     latestHcp = HandicapReal.objects.get(golfer=golfer.id, week=wk, year=2021)
 
                 # if week played is the 4th week the golfer has played
-                if len(weeksPlayed) == 4:
+                if len(weeksPlayed) == 4 and golfer.team != 0:
 
                     # check if handicap exists already
                     if HandicapReal.objects.filter(golfer=golfer.id, week=wk, year=2021).exists():
@@ -860,16 +860,35 @@ def copyHcp():
             # last week of loop (next played week)
             if wk == week + 1:
 
-                # iterate through the weeks the golfer has played and set them all to the handicap on the 4th round played
-                for rd in weeksPlayed:
+                # 3 weeks havent been played yet
+                # if the golfer is a sub
+                if golfer.team == 0 and len(weeksPlayed) > 1:
+                    # ensure the weeks are in the correct order (they should be this is just in case though)
+                    weeksPlayed.sort()
+
+                    secondWeekPlayed = weeksPlayed[1]
+                    firstWeekPlayed = weeksPlayed[0]
 
                     # check if handicap exists already
-                    if HandicapReal.objects.filter(golfer=golfer.id, week=rd, year=2021).exists():
-                        handicap = HandicapReal.objects.get(golfer=golfer.id, week=rd, year=2021)
-                        handicap.handicap = latestHcp
+                    if HandicapReal.objects.filter(golfer=golfer.id, week=firstWeekPlayed, year=2021).exists():
+                        handicap = HandicapReal.objects.get(golfer=golfer.id, week=firstWeekPlayed, year=2021)
+                        handicap.handicap = HandicapReal.objects.get(golfer=golfer.id, week=secondWeekPlayed, year=2021).handicap
                         handicap.save()
-                        print(f'Under 3 - Wrote {latestHcp} to {golfer.name} on week {rd}')
+                        print(f'Under 3 - Wrote second week played hcp of {HandicapReal.objects.get(golfer=golfer.id, week=secondWeekPlayed, year=2021).handicap} to {golfer.name} on first week {firstWeekPlayed}')
                     else:
-                        HandicapReal(golfer=golfer.id, week=rd, year=2021, handicap=latestHcp).save()
-                        print(f'Under 3 NO EXISTING HCP - Wrote {latestHcp} to {golfer.name} on week {rd}')
+                        HandicapReal(golfer=golfer.id, week=firstWeekPlayed, year=2021, handicap=HandicapReal.objects.get(golfer=golfer.id, week=secondWeekPlayed, year=2021).handicap).save()
+                        print(f'Under 3 NO EXISTING HCP - Wrote second week played hcp of {HandicapReal.objects.get(golfer=golfer.id, week=secondWeekPlayed, year=2021).handicap} to {golfer.name} on first week {firstWeekPlayed}')
+                if len(weeksPlayed) == 1 and golfer.team == 0:
+                    # check if handicap exists already
+                    if HandicapReal.objects.filter(golfer=golfer.id, week=weeksPlayed[0], year=2021).exists():
+                        handicap = HandicapReal.objects.get(golfer=golfer.id, week=weeksPlayed[0], year=2021)
+                        handicap.handicap = HandicapReal.objects.get(golfer=golfer.id, week=weeksPlayed[0]+1, year=2021).handicap
+                        handicap.save()
+                        print(f'1 Week - Wrote second week played hcp of {HandicapReal.objects.get(golfer=golfer.id, week=weeksPlayed[0]+1, year=2021).handicap} to {golfer.name} on first week {weeksPlayed[0]}')
+                    else:
+                        HandicapReal(golfer=golfer.id, week=weeksPlayed[0], year=2021, handicap=HandicapReal.objects.get(golfer=golfer.id, week=weeksPlayed[0]+1, year=2021).handicap).save()
+                        print(f'1 Week NO EXISTING HCP - Wrote second week played hcp of {HandicapReal.objects.get(golfer=golfer.id, week=weeksPlayed[0]+1, year=2021).handicap} to {golfer.name} on first week {weeksPlayed[0]}')
+
+
+
 
