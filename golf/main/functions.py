@@ -73,6 +73,10 @@ def makeRound(golfer_id, week, year, **kwargs):
         gross = getGross(golfer_id, week, year=year, subs=subs)
         net = getNet(golfer_id, week, year=year, subs=subs)
         team_id = Golfer.objects.get(id=golfer_id).team
+
+        if team_id == 0:
+            team_id = getUnSubTeam(golfer_id, 12)
+
         golfers = getTeamGolfers(team_id, week, year=year, subs=subs)
         is_front = Matchup.objects.filter(week=week, year=year).first().front
         points = getPoints(golfer_id, week, year=year, is_front=is_front, subs=subs)
@@ -157,6 +161,8 @@ def makeRound(golfer_id, week, year, **kwargs):
             roundD.net = net
             roundD.std_dev = std_dev
             roundD.save()
+
+            print(roundD)
         else:
             Round(golfer=golfer_id, week=week, year=year, opp=opp_golfer_id, front=is_front,
                     opp_net=opp_net, opp_gross=opp_gross, opp_points=opp_points, opp_hcp=opp_hcp,
