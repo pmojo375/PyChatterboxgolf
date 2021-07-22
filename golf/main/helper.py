@@ -838,24 +838,24 @@ def getWeek(**kwargs):
     week = 1
 
     # initialize the number of weeks in the season
-    season_weeks = 20
+    season_weeks = 21
 
     # get the number of rainouts for the season
-    dates = Date.objects.filter(date__year=2021)
+    #dates = Date.objects.filter(date__year=2021)
 
-    rain_outs = dates.count()
+    #rain_outs = dates.count()
 
-    season_weeks = season_weeks + rain_outs
+    #season_weeks = season_weeks + rain_outs
 
     week_offset = 0
 
     # iterate through all of the seasons weeks
     for w in range(1, season_weeks + 1):
-        if dates.filter(rain=True, date=datetime(year=(start + w * td_week).year, day=(start + w * td_week).day, month=(start + w * td_week).month)).exists():
-            week_offset = week_offset + 1
+        #if dates.filter(rain=True, date=datetime(year=(start + w * td_week).year, day=(start + w * td_week).day, month=(start + w * td_week).month)).exists():
+            #week_offset = week_offset + 1
 
         if now > start + w * td_week:
-            week = w - week_offset
+            week = w - 1#week_offset
 
     # offset by one week if not all scores are posted
     if offset:
